@@ -37,6 +37,22 @@ if path:match("%.png$") then
 end
 
 local function show(mod, args) UIManager:show(require(mod):new(args)) end
+-- typeset scenes: open the reader's typesetting sheet on a Leaf tab (leaf_key), then run `after`
+local function ts_open(key, after)
+    local ui = RUI()
+    if not ui then return end
+    if not ui._leaf_ts_paged and not ui.document.koptinterface then
+        ui._leaf_ts_paged = true
+        ui:handleEvent(require("ui/event"):new("GotoPage", 12)) -- a text page behind the sheet
+    end
+    ui.config:onShowConfigMenu()
+    local d = ui.config.config_dialog
+    if not d then return end
+    for i, o in ipairs(d.config_options) do
+        if o.leaf_key == key then d:onShowConfigPanel(i) end
+    end
+    if after then after(d) end
+end
 local noop = function() end
 
 local SCENES = {
@@ -173,7 +189,7 @@ local SCENES = {
         local d = RUI().config.config_dialog
         if d then
             for i, o in ipairs(d.config_options) do
-                if o.icon == "appbar.textsize" then d:handleEvent(require("ui/event"):new("ShowConfigPanel", i)) end
+                if o.icon == "appbar.textsize" or o.leaf_key == "text" then d:handleEvent(require("ui/event"):new("ShowConfigPanel", i)) end
             end
         end
     end },
@@ -183,6 +199,44 @@ local SCENES = {
         if ok and chrome.show then chrome.show(RUI()) end
     end },
     { "bookmarks", function() RUI().bookmark:onShowBookmark() end },
+    -- typeset scenes (EPUB: every tab; then the PDF panel, which replaces the reader: keep it last)
+    { "ts-presets", function() ts_open("presets") end },
+    { "ts-text", function() ts_open("text") end },
+    { "ts-text-help", function() ts_open("text", function(d) d._leaf_help = "word_spacing"; d:update() end) end },
+    { "ts-font", function() ts_open("font") end },
+    { "ts-margins", function() ts_open("margins") end },
+    { "ts-page", function() ts_open("page") end },
+    { "ts-layout", function() ts_open("layout") end },
+    { "ts-contrast", function() ts_open("contrast") end },
+    { "ts-style", function() ts_open("style") end },
+    { "ts-style-scrolled", function() ts_open("style", function(d)
+        local sc = d._leaf_scroll
+        if sc then sc:initState(); if sc._is_scrollable then sc:_scrollBy(0, sc._max_scroll_offset_y) end end
+    end) end },
+    { "ts-slider-change", function() ts_open("text", function(d)
+        -- moves the line spacing slider in code (as a tap at 80% would): exercises the choose/update path
+        local o = d:findOptionByName("line_spacing")
+        if not o then return end
+        local before = d.configurable.line_spacing
+        d:onConfigChoose(o.values, o.name, o.event, o.args, math.floor(#o.values * 0.8), o.hide_on_apply)
+        -- put the book back once the shot is taken (doc settings persist across runs)
+        local ui = RUI()
+        UIManager:scheduleIn(2, function()
+            ui.document.configurable.line_spacing = before
+            ui:handleEvent(require("ui/event"):new("SetLineSpace", before))
+        end)
+    end) end },
+    { "reader-pdf", function()
+        local book = G_reader_settings:readSetting("home_dir") .. "/KOReader UI Redesign Concept.pdf"
+        require("apps/reader/readerui"):showReader(book)
+    end, keep = true, wait = 4 },
+    { "ts-pdf-rotate", function() ts_open("rotate") end },
+    { "ts-pdf-crop", function() ts_open("crop") end },
+    { "ts-pdf-zoom", function() ts_open("zoom") end },
+    { "ts-pdf-page", function() ts_open("page") end },
+    { "ts-pdf-reflow", function() ts_open("reflow") end },
+    { "ts-pdf-contrast", function() ts_open("contrast") end },
+    { "ts-pdf-doc", function() ts_open("doc") end },
 }
 
 local wanted = os.getenv("KO_AUTOSHOT_SCENES")
