@@ -3,7 +3,7 @@
   "fm": "#/library",
   "home": "#/home",
   "lib-library": "#/library",
-  "lib-grid": "#/library",
+  "lib-grid": "#/library?view=grid",
   "lib-list": "#/library?view=list",
   "lib-detail": "#/library?view=detail",
   "lib-favorites": "#/library?tab=favorites",
@@ -70,5 +70,6 @@
   "calendar": "#/stats?range=month",
   "catalog-controls": "#/catalog?page=controls",
   "stats-month": "#/stats?range=month",
-  "input-filled": "#/home?o=input&o.title=Rename&o.value=Animal%20Farm%20(EN-AR).epub&o.ok=Rename"
+  "input-filled": "#/home?o=input&o.title=Rename&o.value=Animal%20Farm%20(EN-AR).epub&o.ok=Rename",
+  "lib-folders": "#/library?tab=folders"
 }

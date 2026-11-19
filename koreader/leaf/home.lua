@@ -204,11 +204,11 @@ function M.apply(L)
         end
     end
 
-    -- the current-% badge on a cover (.ko-badge): pill, --surface on --text
+    -- the current-% badge on a cover (.ko-badge): pill, --on-cover on --cover-scrim
     local function badge(t)
-        local tw = text(t, "ui-semibold", "fs-2xs", "text")
+        local tw = text(t, "ui-semibold", "fs-2xs", "on-cover")
         local sz = tw:getSize()
-        return FrameContainer:new{ bordersize = 0, background = T.color("surface"), radius = math.floor(T.px("h-badge") / 2),
+        return FrameContainer:new{ bordersize = 0, background = T.color("cover-scrim"), radius = math.floor(T.px("h-badge") / 2),
             padding = 0, padding_left = P.px(7), padding_right = P.px(7), margin = 0,
             require("ui/widget/container/centercontainer"):new{ dimen = Geom:new{ w = sz.w, h = T.px("h-badge") }, tw } }
     end
