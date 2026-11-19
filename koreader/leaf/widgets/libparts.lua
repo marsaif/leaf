@@ -70,14 +70,14 @@ end
 
 ---------------------------------------------------------------- covers
 --- PT's cached cover first (no document opening), then KOReader's own cover extraction.
-function P.cover(file, w, h)
+function P.cover(file, w, h, cache_only)
     local bb
     local BIM = package.loaded["bookinfomanager"]
     if BIM then
         local ok, info = pcall(BIM.getBookInfo, BIM, file, true)
         if ok and info and info.has_cover and info.cover_bb then bb = info.cover_bb end
     end
-    if not bb then
+    if not bb and not cache_only then
         pcall(function() bb = require("apps/filemanager/filemanagerbookinfo"):getCoverImage(nil, file) end)
     end
     if not bb then return nil end
@@ -95,9 +95,12 @@ function P.CoverBox:init()
     self.radius = self.radius or T.px("r-cover")
     if not self.image then
         -- text cover (.lb-tcover): --surface-2 board, title in the display face
-        local pad = T.px("sp-2")
+        local tiny = self.width < P.px(48)
+        local pad = tiny and T.px("sp-1") or T.px("sp-2")
+        local face = L().face("display-semibold", self.width < P.px(60) and "fs-2xs" or "fs-md")
+        if tiny then face = require("ui/font"):getFace(require("leaf/fonts").FILES["display-semibold"], 6) end
         self._text = CenterContainer:new{ dimen = Geom:new{ w = self.width, h = self.height },
-            TextBoxWidget:new{ text = self.title or "?", face = L().face("display-semibold", self.width < P.px(60) and "fs-2xs" or "fs-md"),
+            TextBoxWidget:new{ text = self.title or "?", face = face,
                 width = self.width - 2 * pad, alignment = "center", bgcolor = T.color("surface-2"),
                 height = self.height - 2 * pad, height_overflow_show_ellipsis = true, height_adjust = true } }
     end
@@ -134,7 +137,8 @@ end
 
 function P.coverBox(file, w, h, opts)
     opts = opts or {}
-    return P.CoverBox:new{ image = P.cover(file, w, h), width = w, height = h, title = opts.title, bg = opts.bg }
+    return P.CoverBox:new{ image = P.cover(file, w, h, opts.cache_only), width = w, height = h, title = opts.title, bg = opts.bg,
+        radius = opts.radius }
 end
 
 ---------------------------------------------------------------- book info

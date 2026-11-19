@@ -305,6 +305,23 @@ MAP = {
     "leaf.sys.trend.up": "trending-up",
     "leaf.sys.check": "check",
     # -- end system and tools
+    # -- library polish (cells, rows, book actions, details, folders)
+    **{f"leaf.lib.{k}": v for k, v in {
+        "circlecheck": "circle-check", "pause": "pause", "pencil": "pencil-line", "info": "info", "text": "text",
+        "fileoutput": "file-output", "appwindow": "app-window", "tag": "tag", "house": "house",
+        "harddrive": "hard-drive", "symlink": "folder-symlink", "stickynote": "sticky-note", "listplus": "list-plus",
+        "ellipsis": "ellipsis", "sortupdown": "arrow-down-up", "upleft": "corner-left-up", "chevright": "chevron-right",
+        "copy": "copy", "scissors": "scissors", "paste": "clipboard-paste", "squarecheck": "square-check",
+        "trash": "trash-2", "image": "image", "imageoff": "image-off", "refresh": "refresh-cw", "reset": "rotate-ccw",
+        "library": "library", "heart": "heart", "star": "star", "highlighter": "highlighter", "check": "check",
+        "plus": "plus", "eraser": "eraser", "sortdown": "arrow-down-narrow-wide", "play": "play",
+        "folderopen": "folder-open", "booktext": "book-text",
+    }.items()},
+    "leaf.lib.star.on": (["star"], {"fill": "#000000"}),
+    "leaf.lib.heart.on": (["heart"], {"fill": "#000000"}),
+    "leaf.lib.check.bold": (["check"], {"stroke": "bold"}),
+    "leaf.lib.heart.bold": (["heart"], {"stroke": "bold"}),
+    # -- end library polish
 }
 
 KEEP_STOCK = {

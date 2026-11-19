@@ -58,6 +58,8 @@ L.MODULES = {
     "bookmap",
     "bookend",
     "pageheader",
+    -- library polish
+    "bookactions",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

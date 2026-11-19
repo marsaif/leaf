@@ -56,6 +56,7 @@ end
 local noop = function() end
 
 local LK = {} -- lookup scenes: helpers, defined below the list
+local LIB = {} -- library scenes: helpers, defined below the list
 -- desktop has no Wi-Fi hardware: a fake scan result (system and tools scenes)
 function LEAF_FAKE_NETWORKS()
     return {
@@ -70,7 +71,7 @@ function LEAF_FAKE_NETWORKS()
 end
 
 local SCENES = {
-    { "fm", noop },
+    { "fm", function() LIB.seed() end, wait = 4 },
     { "menu", function() FM().menu:onShowMenu() end },
     { "menu-settings", function()
         local fm = FM()
@@ -148,13 +149,15 @@ local SCENES = {
         -- the layout is saved in settings: put English back once the shot is taken
         UIManager:scheduleIn(1.4, function() G_reader_settings:saveSetting("keyboard_layout", "en") end)
     end },
-    { "buttondialog", function() show("ui/widget/buttondialog", {
-        title = "Animal Farm",
-        buttons = {
-            { { text = "Open", callback = noop }, { text = "Book information", callback = noop } },
-            { { text = "Mark as finished", callback = noop }, { text = "Add to collection", callback = noop } },
-            { { text = "Delete", callback = noop }, { text = "Rename", callback = noop } },
-        } }) end },
+    { "buttondialog", function()
+        -- the library's long-press on a book (Leaf book-actions sheet over KOReader's file dialog)
+        LIB.seed()
+        local fc = FM().file_chooser
+        local file = G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub"
+        if fc and fc.showFileDialog then fc:showFileDialog({ path = file, is_file = true, text = "Animal Farm.epub" })
+        else show("ui/widget/buttondialog", { title = "Animal Farm", buttons = {
+            { { text = "Open", callback = noop }, { text = "Book information", callback = noop } } } }) end
+    end, wait = 2 },
     { "spin", function() show("ui/widget/spinwidget", {
         title_text = "Items per page", info_text = "Number of books shown on one page",
         value = 14, value_min = 6, value_max = 24, default_value = 14, callback = noop }) end },
@@ -185,8 +188,9 @@ local SCENES = {
         kv_pairs = { { "Title", "Animal Farm" }, { "Author", "George Orwell" }, { "Format", "EPUB" },
             { "Pages", "112" }, "----", { "Language", "en" }, { "Size", "412 KB" } } }) end },
     { "bookdetails", function()
-        FM().bookinfo:show(G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub")
-    end },
+        LIB.seed()
+        FM().bookinfo:show(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+    end, wait = 2 },
     -- kvpages scenes (KeyValuePage, TextViewer)
     { "kv-bookinfo", function()
         -- the Leaf book details page, then its ⋮: KOReader's full "Book information" list
@@ -230,35 +234,30 @@ local SCENES = {
         show("ui/widget/textviewer", { title = "Page HTML", text_type = "code",
             text = '<section id="chapter-1" class="chapter">\n  <p class="para" id="p2">\n    The slow on for of Benjamin at the bright, such which Clover that could light old.\n  </p>\n</section>' })
     end },
-    -- library scenes
-    { "lib-library", function() require("leaf/library").showTab("library") end, wait = 3 },
-    { "lib-folders", function() require("leaf/library").showTab("folders") end, wait = 3 },
+    -- library scenes (LIB.seed: realistic sandbox data, once: statuses, history, collections, stats)
+    { "lib-library", function() LIB.seed() require("leaf/library").showTab("library") LIB.view("grid") end, wait = 4 },
+    { "lib-folders", function() LIB.seed() require("leaf/library").showTab("folders") end, wait = 4 },
     { "lib-detail", function()
+        LIB.seed()
         require("leaf/library").showTab("library")
-        require("leaf/library").setView("detail")
+        LIB.view("detail")
     end, wait = 3 },
-    { "lib-list", function() require("leaf/library").setView("list") end, wait = 3 },
-    { "lib-grid", function() require("leaf/library").setView("grid") end, wait = 3 },
+    { "lib-list", function() LIB.seed() require("leaf/library").showTab("library") LIB.view("list") end, wait = 4 },
+    { "lib-grid", function() LIB.seed() require("leaf/library").showTab("library") LIB.view("grid") end, wait = 4 },
     { "lib-favorites", function()
-        local RC = require("readcollection")
-        local home = G_reader_settings:readSetting("home_dir")
-        for _i, f in ipairs({ "/Animal Farm.epub", "/Animal Farm (EN-AR).epub" }) do
-            if not RC:isFileInCollection(home .. f, RC.default_collection_name) then RC:addItem(home .. f, RC.default_collection_name) end
-        end
-        RC:write({ [RC.default_collection_name] = true })
+        LIB.seed()
+        require("leaf/library").showTab("library")
+        LIB.view("grid")
         require("leaf/library").showTab("favorites")
     end, wait = 3 },
-    { "lib-collections", function() require("leaf/library").showTab("collections") end, wait = 2 },
+    { "lib-collections", function() LIB.seed() require("leaf/library").showTab("collections") end, wait = 4 },
     { "lib-history", function()
-        local RH = require("readhistory")
-        local home = G_reader_settings:readSetting("home_dir")
-        for _i, f in ipairs({ "/KOReader UI Redesign Concept.pdf", "/Animal Farm (EN-AR).epub", "/Animal Farm.epub" }) do
-            RH:addItem(home .. f, os.time())
-        end
+        LIB.seed()
         require("leaf/library").navigate("history")
     end, wait = 3 },
     { "lib-settings", function() require("leaf/library").navigate("settings") end, wait = 2 },
     { "home", function()
+        LIB.seed()
         require("leaf/library").closeOverlays()
         require("leaf/home").show()
     end, wait = 3 },
@@ -581,6 +580,128 @@ function LK.select(y0, y1, word)
 end
 function LK.word_boxes() return RUI().highlight.selected_text.sboxes end
 
+
+-- library scenes: helpers
+-- PT's display mode for every list (grid / detail / list), without the file manager rebuild of setView
+function LIB.view(key)
+    local lib = require("leaf/library")
+    if lib.currentView() ~= key then lib.setView(key) end
+end
+-- sandbox data like a device in use (idempotent): sidecars (status, progress, rating, highlights),
+-- history with times, favorites + collections, the statistics database, PT's book cache
+function LIB.seed()
+    if LIB.seeded then return end
+    LIB.seeded = true
+    local home = G_reader_settings:readSetting("home_dir")
+    if not home then return end
+    local DocSettings = require("docsettings")
+    local BookList = require("ui/widget/booklist")
+    local now = os.time()
+    local function at(days_ago, h, m)
+        local d = os.date("*t", now - days_ago * 86400)
+        d.hour, d.min, d.sec = h, m, 0
+        return math.min(now - 60, os.time(d))
+    end
+    local books = {
+        { f = "/Animal Farm.epub", pct = 0.08, status = "reading", pages = 112, last = at(0, 21, 10),
+          hl = { { "All animals are equal, but some animals are more equal than others.", "The whole book in one line.", "Chapter X", 102 },
+                 { "Man is the only creature that consumes without producing.", nil, "Chapter I", 9 } } },
+        { f = "/Animal Farm (EN-AR).epub", pct = 1, status = "complete", rating = 5, pages = 140, last = at(2, 22, 30) },
+    }
+    for _i, b in ipairs(books) do
+        local file = home .. b.f
+        local ds = DocSettings:open(file)
+        ds:saveSetting("percent_finished", b.pct)
+        ds:saveSetting("doc_pages", b.pages)
+        ds:saveSetting("last_page", math.max(1, math.floor(b.pages * b.pct + 0.5)))
+        ds:saveSetting("summary", { status = b.status, rating = b.rating, modified = os.date("%Y-%m-%d", b.last) })
+        ds:saveSetting("partial_md5_checksum", require("util").partialMD5(file))
+        if b.hl then
+            local ann = {}
+            for _j, h in ipairs(b.hl) do
+                table.insert(ann, { text = h[1], note = h[2], chapter = h[3], pageno = h[4], page = h[4],
+                    datetime = os.date("%Y-%m-%d %H:%M:%S", b.last - 3600 * _j), drawer = "lighten", color = "yellow" })
+            end
+            ds:saveSetting("annotations", ann)
+            ds:saveSetting("bookmarks_sorted_20220106", true)
+        end
+        ds:flush()
+        BookList.resetBookInfoCache(file)
+    end
+    -- history: today, this week, and a deleted file from earlier
+    local RH = require("readhistory")
+    local gone = home .. "/Brave New World.epub" -- in the history, then deleted
+    local fh = io.open(gone, "w")
+    if fh then fh:close() end
+    RH:addItem(gone, now - 16 * 86400, true)
+    os.remove(gone)
+    for _j, v in ipairs(RH.hist) do if v.file == gone then v.dim = true end end
+    RH:addItem(home .. "/Animal Farm (EN-AR).epub", books[2].last, true)
+    RH:addItem(home .. "/Animal Farm.epub", books[1].last)
+    -- favorites + two collections
+    local RC = require("readcollection")
+    local fav = RC.default_collection_name
+    local function add(f, coll)
+        if not RC.coll[coll] then RC:addCollection(coll) end
+        if not RC:isFileInCollection(home .. f, coll) then RC:addItem(home .. f, coll) end
+    end
+    add("/Animal Farm.epub", fav)
+    add("/Animal Farm (EN-AR).epub", "Arabic")
+    add("/Animal Farm (EN-AR).epub", "To read this winter")
+    add("/KOReader UI Redesign Concept.pdf", "To read this winter")
+    add("/Animal Farm.epub", "To read this winter")
+    RC:write()
+    -- a folder shortcut (the Folders tab's chips)
+    local shortcuts = G_reader_settings:readSetting("folder_shortcuts", {})
+    shortcuts[home .. "/Folder A"] = shortcuts[home .. "/Folder A"] or { time = now }
+    -- statistics: 7 days of reading on Animal Farm (home: today, streak, pages/h)
+    pcall(function()
+        local path = require("datastorage"):getSettingsDir() .. "/statistics.sqlite3"
+        local SQ3 = require("lua-ljsqlite3/init")
+        local conn = SQ3.open(path)
+        conn:exec([[CREATE TABLE IF NOT EXISTS book (id integer PRIMARY KEY autoincrement, title text, authors text,
+            notes integer, last_open integer, highlights integer, pages integer, series text, language text, md5 text,
+            total_read_time integer, total_read_pages integer);
+            CREATE TABLE IF NOT EXISTS page_stat_data (id_book integer, page integer NOT NULL DEFAULT 0,
+            start_time integer NOT NULL DEFAULT 0, duration integer NOT NULL DEFAULT 0, total_pages integer NOT NULL DEFAULT 0,
+            UNIQUE (id_book, page, start_time));]])
+        local n = tonumber(conn:rowexec("SELECT count(*) FROM page_stat_data;")) or 0
+        if n == 0 then
+            local md5 = require("util").partialMD5(home .. "/Animal Farm.epub")
+            conn:exec(string.format([[INSERT INTO book (title, authors, notes, last_open, highlights, pages, series, language, md5,
+                total_read_time, total_read_pages) VALUES ('Animal Farm', 'George Orwell', 1, %d, 2, 112, '', 'en', '%s', 9000, 140);]],
+                now, md5))
+            local id = tonumber(conn:rowexec("SELECT max(id) FROM book;"))
+            local mins = { 35, 62, 9, 28, 22, 51, 40, 18, 30, 26, 44, 33 } -- today first
+            local page = 1
+            for d, m in ipairs(mins) do
+                local t0 = at(d - 1, 20, 0)
+                for k = 0, math.floor(m * 60 / 78) - 1 do
+                    conn:exec(string.format("INSERT OR IGNORE INTO page_stat_data VALUES (%d, %d, %d, 78, 112);",
+                        id, page % 112 + 1, t0 + k * 78))
+                    page = page + 1
+                end
+            end
+        end
+        conn:close()
+    end)
+    -- PT's book cache (titles, covers) for the Library tab: extract now, in the background
+    local BIM = package.loaded["bookinfomanager"]
+    if BIM then
+        local files = {}
+        local lfs = require("libs/libkoreader-lfs")
+        for f in lfs.dir(home) do
+            if f:match("%.epub$") or f:match("%.pdf$") then
+                table.insert(files, { filepath = home .. "/" .. f, cover_specs = { max_cover_w = 600, max_cover_h = 900 } })
+            end
+        end
+        BIM:extractInBackground(files)
+        UIManager:scheduleIn(2.5, function()
+            local fm = FM()
+            if fm then fm:onRefresh() end
+        end)
+    end
+end
 
 local wanted = os.getenv("KO_AUTOSHOT_SCENES")
 local list = {}

@@ -3,7 +3,7 @@
   "fm": "#/library",
   "home": "#/home",
   "lib-library": "#/library",
-  "lib-grid": "#/library",
+  "lib-grid": "#/library?view=grid",
   "lib-list": "#/library?view=list",
   "lib-detail": "#/library?view=detail",
   "lib-favorites": "#/library?tab=favorites",
@@ -55,5 +55,6 @@
   "sleep-preview": "#/home?o=sleep&o.preview=cover",
   "about": "#/home?o=about",
   "quick": "#/home?o=quick",
-  "catalog": "#/catalog"
+  "catalog": "#/catalog",
+  "lib-folders": "#/library?tab=folders"
 }
