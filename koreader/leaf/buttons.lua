@@ -65,6 +65,8 @@ function M.apply(L)
         -- list rows built from buttons (sheets): regular weight, --text / --danger label
         row = { fg = "text", face = "ui" },
         ["row-danger"] = { fg = "danger", face = "ui" },
+        -- small text buttons (footers: "Page 1 of 4")
+        caption = { fg = "text-2", face = "ui", size = "fs-sm" },
     }
 
     local function color_label(self)
@@ -88,7 +90,7 @@ function M.apply(L)
             self.background = k.bg and T.color(k.bg) or nil
             self.radius = T.px("r-md")
             self.text_font_face = k.face and fonts.FILES[k.face] or medium
-            self.text_font_size = T.fs("fs-md")
+            self.text_font_size = T.fs(k.size or "fs-md")
             self.text_font_bold = k.bold or false
         end
         orig(self)

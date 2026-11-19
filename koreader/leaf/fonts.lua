@@ -116,7 +116,10 @@ function M.apply(L)
         if font and size and not is_fallback[font] then
             local stock_key = self.fontmap[font] ~= nil
             local redirected = REDIRECT[font]
-            if stock_key or redirected then
+            -- Project: Title's "source/" faces: switch the font, keep its sizes (its layout,
+            -- partly the user's own, is tuned to them); stock faces move to the Leaf scale
+            local pt_face = font:match("^source/") ~= nil
+            if stock_key or (redirected and not pt_face) then
                 size = M.leaf_size(T, size) * T.scale
             end
             if redirected then font = redirected end

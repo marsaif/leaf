@@ -139,8 +139,35 @@ local function header_init(L, self)
 end
 
 function M.apply(L)
+    local T = L.T
+    -- the footer (.lb footer): folder / sort text --fs-sm --text-3, "Page x of y" --fs-sm --text-2
+    local function style_footer(menu)
+        local cf = menu.cur_folder_text
+        if cf and cf.setText then
+            cf.face = L.face("ui", "fs-sm")
+            cf.fgcolor = T.color("text-3")
+            cf:setText(cf.text or "")
+        end
+        local pt = menu.page_info_text
+        if pt and pt.setText and pt._leaf_kind ~= "caption" then
+            pt._leaf_kind = "caption"
+            pt:setText(pt.text or "", pt.width)
+        end
+    end
     local hooks = {
         -- PT's header (its titlebar.lua; KOReader's is "ui/widget/titlebar")
+        -- PT's list / grid container: footer
+        covermenu = function(CoverMenu)
+            if type(CoverMenu) ~= "table" or not CoverMenu.menuInit then return end
+            L.wrap(CoverMenu, "menuInit", function(orig, self, ...)
+                orig(self, ...)
+                style_footer(self)
+            end, "PT CoverMenu:menuInit")
+            L.wrap(CoverMenu, "updatePageInfo", function(orig, self, ...)
+                orig(self, ...)
+                style_footer(self)
+            end, "PT CoverMenu:updatePageInfo")
+        end,
         titlebar = function(TitleBar)
             if type(TitleBar) ~= "table" or not TitleBar.setCount then return end -- not PT's
             L.wrap(TitleBar, "init", function(orig, self) header_init(L, self) end, "PT TitleBar:init")
