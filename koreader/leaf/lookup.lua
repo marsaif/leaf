@@ -23,10 +23,15 @@
         No dictionary installed -> empty state with "Download dictionaries".
         Wikipedia: globe tile, title, "From Wikipedia, the free encyclopedia", language segment,
         footer (Highlight, Dictionary, Full article / Save as EPUB).
+        Plain-text definitions are laid out as the prototype (.rd-dict): head line (headword, /ipa/,
+        part of speech) in the sheet head, numbered senses with their examples in the book face; the
+        sheet sizes to its content. Wikipedia: "Sections" (full article) jumps to a heading.
+      * Online translation (Translator, the popup's Translate) -> the prototype's translate sheet.
       * Footnote popup (FootnoteWidget) -> compact sheet: grip, "FOOTNOTE" eyebrow, Go to note, ×,
         hairline, the note in the book face (Literata unless "use book font" is set).
       * The paragraph translation panel of patches/2-paragraph-translate.lua calls
-        M.build_translate(panel) (prototype "translate").
+        M.build_translate(panel) (prototype "translate"), with the edition's glossary
+        ("Words in this paragraph") when it has one.
     KOReader still does the work: callbacks, settings, events and plugins are the stock ones.
 --]]
 local BD = require("ui/bidi")
@@ -791,6 +796,217 @@ function M.apply(L)
         return fixed + T.px("hit") + T.px("sp-3") * 3 + T.px("hit") + Screen:scaleBySize(58 * T.scale) + T.px("sp-3")
     end
 
+    ---------------------------------------------------- plain-text definitions -> the prototype's layout
+    -- A plain-text result ("answer (verb)\n1. Say ...\n   “example”\n2. ...") is turned into HTML so it
+    -- reads like .rd-dict: the head line (headword, /ipa/, part of speech) moves to the sheet head, senses
+    -- get a numbered ring and their examples in the book face. It stays a KOReader HTML definition
+    -- (ScrollHtmlWidget): text selection, links, in-definition search keep working. Real HTML
+    -- dictionaries and anything we don't recognise keep KOReader's rendering.
+    local POS = { n = "noun", v = "verb", adj = "adjective", a = "adjective", adv = "adverb", r = "adverb",
+        s = "adjective", noun = "noun", verb = "verb", adjective = "adjective", adverb = "adverb",
+        pronoun = "pronoun", preposition = "preposition", conjunction = "conjunction",
+        interjection = "interjection", prep = "preposition", conj = "conjunction", pron = "pronoun",
+        interj = "interjection", ["past tense"] = "past tense" }
+    local function hexc(name)
+        local g = T.gray(name)
+        return string.format("#%02x%02x%02x", g, g, g)
+    end
+    -- MuPDF reads fonts and images only from one resource folder: a small one in the cache holds
+    -- copies of the three faces the definition uses and the sense-number rings
+    local DICT_FONTS = { "Inter-Regular.ttf", "Inter-SemiBold.ttf", "Literata-Italic.ttf" }
+    local res_dir
+    local function dict_res_dir()
+        if res_dir ~= nil then return res_dir end
+        res_dir = false
+        local lfs = require("libs/libkoreader-lfs")
+        local src
+        local ok, list = pcall(function() return require("fontlist"):getFontList() end)
+        if ok and list then
+            for __, path in ipairs(list) do
+                src = src or path:match("^(.*)/Literata%-Regular%.ttf$")
+            end
+        end
+        local dir = require("datastorage"):getDataDir() .. "/cache/leaf-dict"
+        if not (lfs.attributes(dir, "mode") == "directory" or lfs.mkdir(dir)) then return res_dir end
+        for __, name in ipairs(DICT_FONTS) do
+            if src and not lfs.attributes(dir .. "/" .. name, "mode") then
+                local i, o = io.open(src .. "/" .. name, "rb"), io.open(dir .. "/" .. name, "wb")
+                if i and o then o:write(i:read("*a")) end
+                if i then i:close() end
+                if o then o:close() end
+            end
+        end
+        res_dir = dir
+        return res_dir
+    end
+    local function esc(t) return (t:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")) end
+    -- the sense number in a ring (.rd-senses li::before), an SVG (MuPDF's HTML has no border-radius)
+    local function ring(n)
+        local dir = dict_res_dir()
+        local name = string.format("ring-%d-%02x%02x%02x.svg", n, T.gray("surface-2"), T.gray("border-strong"), T.gray("text-2"))
+        local lfs = require("libs/libkoreader-lfs")
+        if dir and not lfs.attributes(dir .. "/" .. name, "mode") then
+            local f = io.open(dir .. "/" .. name, "w")
+            if f then
+                f:write(string.format('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">'
+                    .. '<circle cx="20" cy="20" r="19" fill="%s" stroke="%s" stroke-width="2"/>'
+                    .. '<text x="20" y="27.5" font-family="Helvetica" font-size="21" font-weight="bold" text-anchor="middle" fill="%s">%d</text></svg>',
+                    hexc("surface-2"), hexc("border-strong"), hexc("text-2"), n))
+                f:close()
+            else
+                dir = nil
+            end
+        end
+        if not dir then return '<span class="nt">' .. n .. ".</span>" end
+        return '<img class="nr" src="' .. name .. '"/>'
+    end
+    local function dict_css()
+        local faces = ""
+        if dict_res_dir() and require("libs/libkoreader-lfs").attributes(dict_res_dir() .. "/Inter-Regular.ttf", "mode") then
+            faces = [[
+            @font-face { font-family: 'LeafUI'; src: url('Inter-Regular.ttf'); }
+            @font-face { font-family: 'LeafUI'; font-weight: 600; src: url('Inter-SemiBold.ttf'); }
+            @font-face { font-family: 'LeafBook'; font-style: italic; src: url('Literata-Italic.ttf'); }
+            ]]
+        end
+        return faces .. string.format([[
+            @page { margin: 0; font-family: 'LeafUI', 'Noto Sans'; }
+            body { margin: 0; line-height: 1.5; color: %s; font-family: 'LeafUI', 'Noto Sans'; }
+            table.s { border-collapse: collapse; margin: 0 0 0.8em 0; width: 100%%; }
+            td.n { width: 2em; vertical-align: top; padding: 0.1em 0 0 0; }
+            img.nr { width: 1.33em; height: 1.33em; }
+            td.t { vertical-align: top; padding: 0; }
+            .ex { font-family: 'LeafBook', 'Noto Serif'; font-style: italic; color: %s; margin-top: 0.2em; }
+            p { margin: 0 0 0.8em 0; }
+            p.ar { font-family: 'Noto Naskh Arabic'; font-size: 1.6em; font-weight: 600; line-height: 1.4; text-align: right; margin: 0 0 0.4em 0; }
+            .q { color: %s; font-size: 0.85em; }
+            .nt { font-weight: 600; }
+        ]], hexc("text"), hexc("text-2"), hexc("text-3"))
+    end
+    -- -> html, { ipa, pos } or nil when the text isn't a plain dictionary entry we understand
+    local function format_definition(def, word)
+        if type(def) ~= "string" or def == "" then return end
+        local body, query = def:match("^(.-)\n_______\n(.*)$")
+        body = body or def
+        local lines = {}
+        for line in (body .. "\n"):gmatch("(.-)\r?\n") do table.insert(lines, line) end
+        while #lines > 0 and lines[#lines]:match("^%s*$") do table.remove(lines) end
+        if #lines == 0 then return end
+        local head = {}
+        -- head line: "answer (verb)", "answer /ˈɑːnsə/ noun", "/ˈɑːnsə/"
+        local first = util.trim(lines[1])
+        if #first < 60 and not first:match("^%d") then
+            local ipa = first:match("/([^/]+)/") or first:match("%[([^%]]+)%]")
+            local pos = first:match("%(([%a%s%.]+)%)%s*$")
+            pos = pos and POS[pos:lower():gsub("%.$", "")]
+            if ipa or pos then
+                head.ipa, head.pos = ipa, pos
+                table.remove(lines, 1)
+            end
+        end
+        local out, senses = {}, 0
+        local cur -- the open sense: { text, examples }
+        local function flush()
+            if not cur then return end
+            senses = senses + 1
+            local ex = ""
+            for __, e in ipairs(cur[2]) do ex = ex .. '<div class="ex">' .. esc(e) .. "</div>" end
+            table.insert(out, '<table class="s"><tr><td class="n">' .. ring(senses) .. '</td><td class="t">'
+                .. esc(cur[1]) .. ex .. "</td></tr></table>")
+            cur = nil
+        end
+        local pos_seen = {}
+        for i, line in ipairs(lines) do
+            local t = util.trim(line)
+            local num, rest = t:match("^(%d+)[%.%)]%s+(.+)$")
+            local lp, lrest = t:match("^%(([%a%.]+)%)%s*(.+)$")
+            if lp and not POS[lp:lower():gsub("%.$", "")] then lp = nil end
+            if num then
+                flush()
+                cur = { rest, {} }
+            elseif lp then
+                flush()
+                table.insert(pos_seen, POS[lp:lower():gsub("%.$", "")])
+                cur = { lrest, {} }
+            elseif t == "" then
+                flush()
+            elseif cur and (line:match("^%s") or t:match("^[“\"‘]")) then
+                table.insert(cur[2], t)
+            else
+                flush()
+                if i == 1 and has_arabic(t) and #t < 80 then
+                    table.insert(out, '<p class="ar" dir="rtl">' .. esc(t) .. "</p>")
+                else
+                    table.insert(out, "<p" .. (has_arabic(t) and ' dir="rtl"' or "") .. ">" .. esc(t) .. "</p>")
+                end
+            end
+        end
+        flush()
+        if senses == 0 and not head.pos and not head.ipa then return end
+        if not head.pos and #pos_seen > 0 then
+            local same = true
+            for __, p in ipairs(pos_seen) do if p ~= pos_seen[1] then same = false end end
+            if same then head.pos = pos_seen[1] end
+        end
+        if query then
+            local q = query:match("^%(.-:%s*(.-)%)$")
+            if not (q and word and q:lower() == word:lower()) then
+                table.insert(out, '<p class="q">' .. esc(query) .. "</p>")
+            end
+        end
+        return table.concat(out, "\n"), head
+    end
+    M.format_definition = format_definition
+
+    -- after KOReader picked a result: reformat it (before the definition widget is built or updated)
+    L.wrap(DictQuickLookup, "changeDictionary", function(orig, self, index, skip_update)
+        orig(self, index, true)
+        self._leaf_head = nil
+        self._leaf_wiki_kb, self._leaf_wiki_secs = nil, nil
+        if self.is_wiki and not self.is_html and type(self.definition) == "string" then
+            local def = self.definition
+            -- "(query : x)" when it is just the title again
+            local body, q = def:match("^(.-)\n_______\n%(.-:%s*(.-)%)$")
+            if body and q and self.lookupword and q:lower() == self.lookupword:lower() then def = body end
+            -- intro: "(full article : 64 kB, = 9 x this intro length)" -> the head's sub line
+            local b2, kb = def:match("^(.-)\n%([^\n]-:%s*(%d+)%s*kB,[^\n]*%)%s*$")
+            if not b2 then b2, kb = def:match("^(.-)\n%([^\n]-:%s*(%d+)%s*kB,[^\n]*%)(\n_______\n.*)$") end
+            if b2 and kb then
+                local tail = def:match("\n%([^\n]-kB,[^\n]*%)(\n_______\n.*)$") or ""
+                def = b2 .. tail
+                self._leaf_wiki_kb = tonumber(kb)
+            end
+            -- full article: its sections (KOReader marks level-2 headings with ▉)
+            if self.is_wiki_fullpage then
+                local secs = {}
+                local pos = 1
+                for line in (def .. "\n"):gmatch("(.-)\n") do
+                    local t = line:match("^\226\150\137%s+(.+)$")
+                    if t then table.insert(secs, { util.trim(t), pos }) end
+                    pos = pos + #util.splitToChars(line) + 1
+                end
+                if #secs > 0 then self._leaf_wiki_secs = secs end
+            end
+            self.definition = def
+        end
+        if not self.is_wiki and not self.is_html and self.results[index] then
+            local html, head = format_definition(self.definition, self.results[index].word)
+            if html then
+                self.definition = html
+                self.is_html = true
+                self.css = nil
+                self._leaf_css = dict_css()
+                self.dictionary_resource_directory = dict_res_dir() or nil
+                self._leaf_head = head
+            end
+        end
+        if not skip_update then self:update() end
+    end, "DictQuickLookup:changeDictionary")
+    L.wrap(DictQuickLookup, "getHtmlDictionaryCss", function(orig, self)
+        if self._leaf_head then return self._leaf_css end
+        return orig(self)
+    end, "DictQuickLookup:getHtmlDictionaryCss")
+
     L.wrap(DictQuickLookup, "_instantiateScrollWidget", function(orig, self)
         local W, H = Screen:getWidth(), Screen:getHeight()
         self.width = W
@@ -801,15 +1017,50 @@ function M.apply(L)
         -- fit the Leaf sheet: at most 72% of the screen (74% for Wikipedia), or all of it in large mode
         local large = self.is_wiki_fullpage or G_reader_settings:isTrue("dict_largewindow") or self.temp_large_window
         local max_h = math.floor(H * (large and 0.94 or (self.is_wiki and 0.74 or 0.72))) - overhead(self)
+        -- start from KOReader's own height each time (an earlier result may have shrunk it)
+        self._leaf_def_h0 = self._leaf_def_h0 or self.definition_height
+        self.definition_height = self._leaf_def_h0
+        if self._leaf_head and not G_reader_settings:has("dict_font_size") then
+            self.dict_font_size = T.fs("fs-md")
+        end
         if self.definition_height and self.definition_line_height and self.definition_height > max_h then
             self.definition_height = math.max(self.definition_line_height,
                 math.floor(max_h / self.definition_line_height) * self.definition_line_height)
         end
         if self.definition_height and not large and not self.is_wiki then
-            -- the definition area of the prototype: about 30% of the screen
             self.definition_height = math.min(self.definition_height, max_h)
         end
-        return orig(self)
+        local res
+        if self.is_wiki and not self.is_html then
+            -- .rd-wiki-body p: the book face with line-height 1.6 (TextBoxWidget's line_height is extra em)
+            local TBW = require("ui/widget/textboxwidget")
+            local lh = TBW.line_height
+            TBW.line_height = 0.6
+            local ok, r = pcall(orig, self)
+            TBW.line_height = lh
+            if not ok then error(r) end
+            res = r
+        else
+            res = orig(self)
+        end
+        if large or self.is_wiki or not self.definition_height then return res end
+        -- the dictionary sheet sizes to its content (.rd-dict: height auto, max 72%)
+        local need
+        if self.is_html and self.shw_widget and self.shw_widget.htmlbox_widget then
+            need = self.shw_widget.htmlbox_widget:getSinglePageHeight()
+        elseif not self.is_html and self.stw_widget and self.stw_widget.text_widget then
+            local tw = self.stw_widget.text_widget
+            if tw:getAllLineCount() <= tw:getVisLineCount() then need = tw:getTextHeight() end
+        end
+        if need then
+            need = math.max(need + T.px("sp-1"), T.px("h-row"))
+            if need < self.definition_height then
+                if self.text_widget and self.text_widget.free then self.text_widget:free() end
+                self.definition_height = need
+                res = orig(self)
+            end
+        end
+        return res
     end, "DictQuickLookup:_instantiateScrollWidget")
 
     local function dict_layout(self)
@@ -826,9 +1077,20 @@ function M.apply(L)
                 if b.id and not SKIP[b.id] then table.insert(defs, b) end
             end
         end
+        -- the prototype's order: KOReader's own tools first, plugin tools (Vocabulary, ...) after, Close last
+        local STOCK = { highlight = 1, wikipedia = 2, search = 3, translate = 4, save = 5, link = 6, text_selection = 7, close = 99 }
+        for i, b in ipairs(defs) do b._leaf_i = i end
+        table.sort(defs, function(a, b)
+            local ra, rb = STOCK[a.id] or 50, STOCK[b.id] or 50
+            if ra ~= rb then return ra < rb end
+            return a._leaf_i < b._leaf_i
+        end)
         local function label_of(b)
             if b.id == "highlight" then return self.save_highlight and _("Unhighlight") or _("Highlight") end
-            return b.text_func and b.text_func() or b.text or ""
+            local t = b.text_func and b.text_func() or b.text or ""
+            -- "Add to vocabulary builder" (vocabbuilder plugin) -> "Vocabulary", as the prototype's tool
+            if b.id == "vocabulary" or t:find(_("Add to vocabulary"), 1, true) == 1 then return _("Vocabulary") end
+            return t
         end
         local function run(b)
             if b.enabled == false or not b.callback then return end
@@ -866,6 +1128,29 @@ function M.apply(L)
                     end })
                 table.insert(right, HorizontalSpan:new{ width = T.px("sp-2") })
             end
+            if self._leaf_wiki_secs then
+                -- the article's sections (.rd-wiki-secs): jump to one
+                table.insert(right, icon_button("leaf.mi.toc", function()
+                    local ButtonDialog = require("ui/widget/buttondialog")
+                    local d
+                    local buttons = {}
+                    for __, sec in ipairs(self._leaf_wiki_secs) do
+                        table.insert(buttons, { { text = sec[1], align = "left", callback = function()
+                            UIManager:close(d)
+                            local stw = self.stw_widget
+                            if not (stw and stw.text_widget) then return end
+                            local tw = stw.text_widget
+                            tw:scrollToTop()
+                            local line = stw:getCharPosLineNum(sec[2])
+                            if line and line > 1 then tw:scrollLines(line - 1) end
+                            stw:updateScrollBar()
+                            UIManager:setDirty(self, "ui")
+                        end } })
+                    end
+                    d = ButtonDialog:new{ title = _("Sections"), buttons = buttons }
+                    UIManager:show(d)
+                end, nil, self))
+            end
             if #(self.results or {}) > 1 or self.is_wiki_fullpage then
                 table.insert(right, icon_button("leaf.lk.results", function()
                     if self.is_wiki_fullpage then self:showWikiFullOtherLangsMenu() else self:showWikiResultsMenu() end
@@ -885,7 +1170,24 @@ function M.apply(L)
                     function() self:showResultsAltMenu() end, self),
                 close,
             }
-            table.insert(vg, sheet_head(inner, { title = self.displayword or self.word, right = right, lang = self.lang_in }))
+            -- pronunciation / part of speech (.rd-dict-head .pr), when the definition gave them
+            local pr
+            local h = self._leaf_head
+            if h and (h.ipa or h.pos) then
+                pr = HorizontalGroup:new{ align = "center" }
+                if h.ipa then
+                    table.insert(pr, text("/" .. h.ipa .. "/", "ui", "fs-sm", "text-2"))
+                    if h.pos then table.insert(pr, HorizontalSpan:new{ width = T.px("sp-2") }) end
+                end
+                if h.pos then
+                    local pt = text(h.pos:upper(), "ui-semibold", "fs-xs", "text-2")
+                    local ph = pt:getSize().h + 2 * T.px("sp-half") + 2 * hair
+                    table.insert(pr, Tap:new{ width = pt:getSize().w + 2 * T.px("sp-2"), height = ph, content = pt,
+                        bg = T.color("bg-raised"), border = T.color("border-strong"), radius = math.floor(ph / 2), enabled = false })
+                end
+            end
+            table.insert(vg, sheet_head(inner, { title = self.displayword or self.word, right = right, lang = self.lang_in,
+                sub_widget = pr }))
             if not empty then
                 local names = {}
                 for i, r in ipairs(self.results) do names[i] = r.dict ~= "" and r.dict or _("Dictionary") end
@@ -1050,6 +1352,9 @@ function M.apply(L)
     end, "DictQuickLookup:init")
 
     L.wrap(DictQuickLookup, "update", function(orig, self)
+        -- always build a new definition widget, so it can take the new result's height
+        if self.text_widget and self.text_widget.free then self.text_widget:free() end
+        self.text_widget, self.shw_widget, self.stw_widget = nil, nil, nil
         orig(self)
         dict_layout(self)
         UIManager:setDirty(self, "ui")
@@ -1146,6 +1451,48 @@ function M.apply(L)
     -- called by patches/2-paragraph-translate.lua's Panel:build() when Leaf is on:
     -- panel = { ui, doc, block, para, word, arabic, src, has_book, prev_ok, next_ok,
     --           go(delta), onClose(), setSource(src), define(word) }
+    -- the EN-AR edition follows each paragraph with <div class="gl"><b>en</b> <span class="ar">ar</span> ...</div>:
+    -- -> { {en, ar}, ... } for the paragraph at `block` (empty when the book has none)
+    local VOID = { br = true, img = true, hr = true, input = true, meta = true, link = true, col = true, wbr = true }
+    local function glossary(doc, block)
+        local out = {}
+        if not (doc and block) then return out end
+        local parent, step = block:match("^(.*)/([^/]+)$")
+        local tag = step and step:match("^([%w_]+)")
+        if not (parent and tag) then return out end
+        tag = tag:lower()
+        local idx = tonumber(step:match("%[(%d+)%]")) or 1
+        local ok, html = pcall(doc.getHTMLFromXPointer, doc, parent, 0, false)
+        if not ok or type(html) ~= "string" or not html:find('class="gl"', 1, true) then return out end
+        local depth, count, in_target, after = 0, 0, false, nil
+        for __, closing, name, rest, e in html:gmatch("()<(/?)([%w_]+)([^>]*)>()") do
+            name = name:lower()
+            if closing == "/" then
+                depth = depth - 1
+                if in_target and depth == 1 and name == tag then after = e break end
+            else
+                if depth == 1 and name == tag then
+                    count = count + 1
+                    if count == idx then in_target = true end
+                end
+                if not (VOID[name] or rest:sub(-1) == "/") then depth = depth + 1 end
+            end
+        end
+        if not after then return out end
+        local div = html:match('^%s*<div[^>]-class="gl"[^>]*>(.-)</div>', after)
+        if not div then return out end
+        local function clean(t)
+            t = t:gsub("<[^>]+>", ""):gsub("&#160;", " "):gsub("&nbsp;", " "):gsub("&amp;", "&")
+            t = t:gsub("\226\128[\170-\174]", ""):gsub("\226\128[\142\143]", "") -- bidi embeddings / marks
+            return util.trim(t)
+        end
+        for en, ar in div:gmatch("<b>(.-)</b>%s*<span[^>]*>(.-)</span>") do
+            en, ar = clean(en), clean(ar)
+            if en ~= "" and ar ~= "" then table.insert(out, { en, ar }) end
+        end
+        return out
+    end
+
     function M.build_translate(panel)
         local W, H = Screen:getWidth(), Screen:getHeight()
         local inner = W - 2 * hair
@@ -1234,11 +1581,47 @@ function M.apply(L)
         local ar = TextBoxWidget:new{ text = ar_text, face = panel.arabic and L.face("arabic", "fs-reading-ar") or L.face("ui", "fs-sm"),
             fgcolor = T.color(panel.arabic and "text" or "text-3"), width = tw, line_height = panel.arabic and 0.55 or 0.3,
             bgcolor = T.color("bg-raised"), para_direction_rtl = panel.arabic and true or nil,
-            alignment = panel.arabic and "right" or "left", justified = panel.arabic and true or nil, lang = panel.arabic and "ar" or nil }
+            alignment = "left", justified = panel.arabic and true or nil, lang = panel.arabic and "ar" or nil }
         table.insert(body, HorizontalGroup:new{ align = "top", HorizontalSpan:new{ width = pad }, ar,
             HorizontalSpan:new{ width = gutter - badge_s },
             VerticalGroup:new{ VerticalSpan:new{ width = Screen:scaleBySize(3 * T.scale) }, badge("ع", "arabic", "fs-sm") } })
         table.insert(body, VerticalSpan:new{ width = T.px("sp-4") })
+        -- "Words in this paragraph" (.rd-gloss): the edition's own glossary, when it has one
+        local gl = glossary(panel.doc, panel.block)
+        if #gl > 0 then
+            table.insert(body, HorizontalGroup:new{ HorizontalSpan:new{ width = pad },
+                text(_("WORDS IN THIS PARAGRAPH"), "ui-semibold", "fs-xs", "text-3") })
+            table.insert(body, VerticalSpan:new{ width = T.px("sp-2") })
+            local cw = inner - 2 * pad
+            local rows, cur, used = {}, nil, 0
+            local ch = T.px("h-chip")
+            for __, g in ipairs(gl) do
+                local cg = HorizontalGroup:new{ align = "center",
+                    text(g[1], "ui", "fs-sm", "text-2", math.floor(cw * 0.5)), HorizontalSpan:new{ width = T.px("sp-2") },
+                    text(g[2], "arabic", "fs-md", "text", math.floor(cw * 0.4)) }
+                local w = cg:getSize().w + 2 * T.px("sp-3")
+                cg:resetLayout()
+                local en_word = g[1]
+                local chip = Tap:new{ width = w, height = ch, content = cg, bg = T.color("surface"), border = T.color("border"),
+                    radius = math.floor(ch / 2), callback = function() panel:define(en_word) end }
+                if not cur or used + w > cw then
+                    if #rows == 2 then break end
+                    cur = HorizontalGroup:new{ align = "center", HorizontalSpan:new{ width = pad } }
+                    table.insert(rows, cur)
+                    used = 0
+                elseif used > 0 then
+                    table.insert(cur, HorizontalSpan:new{ width = T.px("sp-1h") })
+                    used = used + T.px("sp-1h")
+                end
+                table.insert(cur, chip)
+                used = used + w
+            end
+            for i, r in ipairs(rows) do
+                if i > 1 then table.insert(body, VerticalSpan:new{ width = T.px("sp-1h") }) end
+                table.insert(body, r)
+            end
+            table.insert(body, VerticalSpan:new{ width = T.px("sp-4") })
+        end
         table.insert(body, HorizontalGroup:new{ align = "center", HorizontalSpan:new{ width = pad },
             icon("leaf.lk.pointer", "icon-sm"), HorizontalSpan:new{ width = T.px("sp-1h") },
             text(_("Tap any English word to look it up."), "ui", "fs-sm", "text-3") })
@@ -1289,6 +1672,202 @@ function M.apply(L)
         panel[1] = Placer:new{ dimen = Geom:new{ x = 0, y = 0, w = W, h = H }, ox = 0, oy = H - sh, frame }
         panel.frame_rect = Geom:new{ x = 0, y = H - sh, w = W, h = sh }
     end
+
+    ------------------------------------------------------------------ 5. online translation (Translator)
+    -- The highlight popup's Translate (and every other caller of Translator:showTranslation) shows the
+    -- prototype's translate sheet instead of KOReader's TextViewer: head "Translation" · "English →
+    -- العربية" pill · ×, the source in the book face (EN badge), dashed rule, the translation (target
+    -- badge; Naskh + right-to-left for Arabic, Persian, Hebrew, Urdu), the detailed view's alternates and
+    -- definitions below; footer: Save to note (hold: save all) · copy (hold: copy all) · Close.
+    -- KOReader still queries the service (Translator:loadPage) and keeps every option of its viewer.
+    local Translator = require("ui/translator")
+    local RTL = { ar = true, fa = true, he = true, iw = true, ur = true, yi = true, ps = true, sd = true, ug = true }
+    local TrSheet = InputContainer:extend{}
+    function TrSheet:init()
+        local W, H = Screen:getWidth(), Screen:getHeight()
+        self.dimen = Geom:new{ x = 0, y = 0, w = W, h = H }
+        if Device:isTouchDevice() then
+            self.ges_events = { TapClose = { GestureRange:new{ ges = "tap", range = self.dimen } } }
+        end
+        if Device:hasKeys() then self.key_events = { Close = { { Device.input.group.Back } } } end
+        local o = self.o
+        local inner = W - 2 * hair
+        local pad = T.px("sp-5")
+        local vg = VerticalGroup:new{ align = "left", grip_block(inner) }
+        local pill_g = HorizontalGroup:new{ align = "center",
+            text(o.from_name, "ui", "fs-sm", "text-2", math.floor(W * 0.22)), HorizontalSpan:new{ width = T.px("sp-1h") },
+            icon("leaf.lk.arrow", "icon-sm"), HorizontalSpan:new{ width = T.px("sp-1h") },
+            text(o.to_name, o.rtl and "arabic" or "ui", o.rtl and "fs-md" or "fs-sm", "text", math.floor(W * 0.22)) }
+        local pill_h = Screen:scaleBySize(30 * T.scale)
+        local pill = Tap:new{ width = pill_g:getSize().w + 2 * T.px("sp-3"), height = pill_h, content = pill_g,
+            bg = T.color("surface-2"), radius = math.floor(pill_h / 2), enabled = false }
+        pill_g:resetLayout()
+        table.insert(vg, sheet_head(inner, { title = _("Translation"), sub = o.sub,
+            right = { pill, HorizontalSpan:new{ width = T.px("sp-2") }, icon_button("close", function() self:onClose() end, nil, self) } }))
+        table.insert(vg, hline(inner))
+        -- body
+        local badge_s = Screen:scaleBySize(22 * T.scale)
+        local function badge(str, rtl)
+            return FrameContainer:new{ bordersize = hair, color = T.color("border"), background = T.color("surface-2"),
+                radius = T.px("r-sm"), padding = 0,
+                CenterContainer:new{ dimen = Geom:new{ w = badge_s - 2 * hair, h = badge_s - 2 * hair },
+                    TextWidget:new{ text = str, face = L.face(rtl and "arabic" or "ui-semibold", rtl and "fs-sm" or "fs-2xs"), fgcolor = T.color("text-2") } } }
+        end
+        local gutter = Screen:scaleBySize(34 * T.scale)
+        local tw = inner - 2 * pad - gutter
+        local function lead(str, rtl) return VerticalGroup:new{ VerticalSpan:new{ width = Screen:scaleBySize(3 * T.scale) }, badge(str, rtl) } end
+        local body = VerticalGroup:new{ align = "left", VerticalSpan:new{ width = T.px("sp-4") } }
+        local src_box = TextBoxWidget:new{ text = o.source, face = L.face("book", "fs-reading"), width = tw, line_height = 0.6,
+            bgcolor = T.color("bg-raised") }
+        table.insert(body, HorizontalGroup:new{ align = "top", HorizontalSpan:new{ width = pad }, lead(o.from_code, false),
+            HorizontalSpan:new{ width = gutter - badge_s }, src_box })
+        table.insert(body, VerticalSpan:new{ width = T.px("sp-4") })
+        local Dash = Widget:extend{}
+        function Dash:init() self.dimen = Geom:new{ w = inner - 2 * pad, h = hair } end
+        function Dash:paintTo(bb, x, y)
+            local d = T.px("sp-1")
+            for xx = 0, self.dimen.w - 1, 2 * d do bb:paintRect(x + xx, y, math.min(d, self.dimen.w - xx), hair, T.color("border-strong")) end
+        end
+        table.insert(body, HorizontalGroup:new{ HorizontalSpan:new{ width = pad }, Dash:new{} })
+        table.insert(body, VerticalSpan:new{ width = T.px("sp-4") })
+        local out = TextBoxWidget:new{ text = o.main, face = o.rtl and L.face("arabic", "fs-reading-ar") or L.face("book", "fs-reading"),
+            width = tw, line_height = o.rtl and 0.55 or 0.6, bgcolor = T.color("bg-raised"), para_direction_rtl = o.rtl or nil,
+            alignment = "left", lang = o.to_code } -- "left" = the paragraph's start (right, when RTL)
+        if o.rtl then
+            table.insert(body, HorizontalGroup:new{ align = "top", HorizontalSpan:new{ width = pad }, out,
+                HorizontalSpan:new{ width = gutter - badge_s }, lead(o.to_badge, true) })
+        else
+            table.insert(body, HorizontalGroup:new{ align = "top", HorizontalSpan:new{ width = pad }, lead(o.to_badge, false),
+                HorizontalSpan:new{ width = gutter - badge_s }, out })
+        end
+        table.insert(body, VerticalSpan:new{ width = T.px("sp-4") })
+        -- detailed view: alternates / definitions (.rd-ts-sep sections)
+        for __, sec in ipairs(o.extras or {}) do
+            table.insert(body, HorizontalGroup:new{ HorizontalSpan:new{ width = pad }, text(sec[1]:upper(), "ui-semibold", "fs-xs", "text-3") })
+            table.insert(body, VerticalSpan:new{ width = T.px("sp-2") })
+            table.insert(body, HorizontalGroup:new{ HorizontalSpan:new{ width = pad }, TextBoxWidget:new{ text = sec[2],
+                face = L.face("ui", "fs-sm"), fgcolor = T.color("text-2"), width = inner - 2 * pad, bgcolor = T.color("bg-raised") } })
+            table.insert(body, VerticalSpan:new{ width = T.px("sp-4") })
+        end
+        -- footer
+        local fh = T.px("h-control") + T.px("sp-2") + T.px("sp-3")
+        local left = HorizontalGroup:new{ align = "center", HorizontalSpan:new{ width = T.px("sp-4") } }
+        if o.save then
+            table.insert(left, btn(_("Save to note"), "secondary", function() self:onClose() o.save(false) end, "leaf.lk.note", true,
+                function() self:onClose() o.save(true) end))
+        end
+        local mid = HorizontalGroup:new{ align = "center" }
+        if o.copy then
+            table.insert(mid, icon_button("leaf.lk.copy", function() o.copy(false) toast(_("Translation copied")) end,
+                function() o.copy(true) toast(_("All copied")) end, self))
+        end
+        local right = HorizontalGroup:new{ align = "center", btn(_("Close"), "secondary", function() self:onClose() end),
+            HorizontalSpan:new{ width = T.px("sp-4") } }
+        local foot = OverlapGroup:new{ dimen = Geom:new{ w = inner, h = fh },
+            LeftContainer:new{ dimen = Geom:new{ w = inner, h = fh }, left },
+            CenterContainer:new{ dimen = Geom:new{ w = inner, h = fh }, mid },
+            RightContainer:new{ dimen = Geom:new{ w = inner, h = fh }, right } }
+        local fixed = vg:getSize().h + hair + fh + T.px("r-xl")
+        vg:resetLayout()
+        local max_body = math.floor(H * (o.detailed and 0.8 or 0.66)) - fixed
+        local bh = body:getSize().h
+        body:resetLayout()
+        if bh > max_body then
+            local ScrollableContainer = require("ui/widget/container/scrollablecontainer")
+            local sc = ScrollableContainer:new{ dimen = Geom:new{ w = inner, h = max_body }, show_parent = self, body }
+            self.cropping_widget = sc
+            table.insert(vg, sc)
+        else
+            table.insert(vg, body)
+        end
+        table.insert(vg, hline(inner))
+        table.insert(vg, foot)
+        local frame = sheet_frame(vg, false)
+        local sh = frame:getSize().h - T.px("r-xl")
+        self.frame_rect = Geom:new{ x = 0, y = H - sh, w = W, h = sh }
+        self[1] = Placer:new{ dimen = Geom:new{ x = 0, y = 0, w = W, h = H }, ox = 0, oy = H - sh, frame }
+    end
+    function TrSheet:onShow() UIManager:setDirty(self, "ui") return true end
+    function TrSheet:onCloseWidget()
+        UIManager:setDirty(nil, "ui")
+        if self.o.on_close then self.o.on_close() end
+    end
+    function TrSheet:onTapClose(arg, ges)
+        if ges.pos:notIntersectWith(self.frame_rect) then self:onClose() end
+        return true
+    end
+    function TrSheet:onClose() UIManager:close(self) return true end
+    M.TrSheet = TrSheet
+
+    L.wrap(Translator, "_showTranslation", function(orig, self, text, detailed_view, source_lang, target_lang, from_highlight, index)
+        target_lang = target_lang or self:getTargetLanguage()
+        source_lang = source_lang or self:getSourceLanguage()
+        local Trapper = require("ui/trapper")
+        local InfoMessage = require("ui/widget/infomessage")
+        local completed, result = Trapper:dismissableRunInSubprocess(function()
+            return self:loadPage(text, target_lang, source_lang)
+        end, _("Querying translation service…"))
+        if not completed then UIManager:show(InfoMessage:new{ text = _("Translation interrupted.") }) return end
+        if not result or type(result) ~= "table" then UIManager:show(InfoMessage:new{ text = _("Translation failed.") }) return end
+        if result[3] then source_lang = result[3] end
+        local function valid(r) return r and type(r) == "table" and #r > 0 end
+        local source, translated = {}, {}
+        if valid(result[1]) then
+            for __, r in ipairs(result[1]) do
+                if type(r[2]) == "string" then table.insert(source, r[2]) end
+                if type(r[1]) == "string" then table.insert(translated, r[1]) end
+            end
+        end
+        local main = table.concat(translated, " ")
+        local src = #source > 0 and table.concat(source, " ") or text
+        local extras = {}
+        if detailed_view and valid(result[6]) then
+            local lines = {}
+            for __, r in ipairs(result[6]) do
+                if type(r[3]) == "table" then
+                    local alts = {}
+                    for __, rt in ipairs(r[3]) do if type(rt[1]) == "string" then table.insert(alts, (rt[1]:gsub("\n", ""))) end end
+                    table.insert(lines, (type(r[1]) == "string" and r[1]:gsub("\n", "") or "") .. ": " .. table.concat(alts, ", "))
+                end
+            end
+            if #lines > 0 then table.insert(extras, { _("Alternate translations"), table.concat(lines, "\n") }) end
+        end
+        if detailed_view and valid(result[13]) then
+            local lines = {}
+            for i, r in ipairs(result[13]) do
+                if r[2] and type(r[2]) == "table" then
+                    table.insert(lines, i .. ". " .. tostring(r[1]))
+                    for __, d in ipairs(r[2]) do table.insert(lines, "   " .. tostring(d[1])) end
+                end
+            end
+            if #lines > 0 then table.insert(extras, { _("Definition"), table.concat(lines, "\n") }) end
+        end
+        local all = { src, main }
+        for __, e in ipairs(extras) do table.insert(all, e[1] .. ":\n" .. e[2]) end
+        local text_all = table.concat(all, "\n\n")
+        local save, on_close
+        if from_highlight then
+            local ui = require("apps/reader/readerui").instance
+            save = function(everything)
+                UIManager:close(ui.highlight.highlight_dialog)
+                ui.highlight.highlight_dialog = nil
+                local t = everything and text_all or main
+                if index then ui.highlight:editNote(index, false, t) else ui.highlight:addNote(t) end
+            end
+            on_close = function()
+                if not ui.highlight.highlight_dialog then ui.highlight:clear() end
+            end
+        end
+        local copy = Device:hasClipboard() and function(everything) Device.input.setClipboardText(everything and text_all or main) end or nil
+        local tl = (target_lang or ""):lower():match("^(%a+)") or ""
+        UIManager:show(TrSheet:new{ o = {
+            source = src, main = main ~= "" and main or _("No translation."), extras = extras, detailed = detailed_view,
+            from_code = (source_lang or "?"):upper():sub(1, 2), from_name = self:getLanguageName(source_lang, "?"),
+            to_code = tl, to_name = tl == "ar" and "العربية" or self:getLanguageName(target_lang, "?"), rtl = RTL[tl] or false,
+            to_badge = tl == "ar" and "ع" or tl:upper():sub(1, 2),
+            sub = T_(_("From %1 · Google Translate · online"), self:getLanguageName(source_lang, "?")),
+            save = save, copy = copy, on_close = on_close } })
+    end, "Translator:_showTranslation")
 end
 
 return M

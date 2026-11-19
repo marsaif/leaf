@@ -47,13 +47,18 @@
   "translate": "#/reader?id=animal-farm&o=translate",
   "stats": "#/stats?range=week",
   "search": "#/search",
-  "search-results": "#/search?q=or&kb=0",
-  "search-book": "#/search?q=silence&scope=book&kb=0",
+  "search-results": "#/search?q=animal&kb=0",
+  "search-book": "#/search?q=silence&scope=book",
   "wifi": "#/home?o=wifi",
   "wifi-password": "#/home?o=wifi&o.connect=Caf%C3%A9%20Lumi%C3%A8re",
   "sleep": "#/home?o=sleep",
   "sleep-preview": "#/home?o=sleep&o.preview=cover",
   "about": "#/home?o=about",
   "quick": "#/home?o=quick",
-  "catalog": "#/catalog"
+  "catalog": "#/catalog",
+  "lk-dict-empty": "#/reader?id=animal-farm&o=dict&o.demo=1",
+  "search-last": "#/search?q=animal",
+  "search-book-results": "#/search?q=silence&scope=book&kb=0",
+  "input-sym": "#/home?o=input&o.title=Go%20to%20page&o.hint=Page%201%E2%80%93112&o.ok=Go",
+  "lk-translator": "#/reader?id=animal-farm&o=translate"
 }

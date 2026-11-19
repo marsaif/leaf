@@ -122,12 +122,13 @@ local function leaf_arabic(ar)
     for _, e in ipairs(row(chars("ئءؤرىةوزظ"), shift3, chars("*\"':؛!؟«»"), chars("%©®™✓[]§¶"))) do table.insert(row3, e) end
     table.insert(row3, { label = "\u{E76D}", width = 1.5, bold = backspace and backspace.bold })
     local bottom = {
-        { "رمز", "رمز", "حرف", "حرف", width = 1.5 }, -- ?١٢٣ / أبج (KOReader's symbols key)
-        { label = "🌐", width = 1.1 },
-        { "،", "،", "،", "،" },
-        { label = "مسافة", " ", " ", " ", " ", width = 5.0 },
-        { ".", ".", ".", "." },
-        { label = "⮠", "\n", "\n", "\n", "\n", width = 2.0 },
+        -- the prototype's flex grows (1.5 · 1.1 · .8 · 5 · .8 · 2) stretched over the 12-key row
+        { "رمز", "رمز", "حرف", "حرف", width = 1.61 }, -- ?١٢٣ / أبج (KOReader's symbols key)
+        { label = "🌐", width = 1.18 },
+        { "،", "،", "،", "،", width = 0.86 },
+        { label = "مسافة", " ", " ", " ", " ", width = 5.35 },
+        { ".", ".", ".", ".", width = 0.86 },
+        { label = "⮠", "\n", "\n", "\n", "\n", width = 2.14 },
     }
     local out = {}
     for key, v in pairs(ar) do out[key] = v end
@@ -183,6 +184,9 @@ function M.apply(L)
     L.wrap(VirtualKey, "init", function(orig, self)
         orig(self)
         local k = kind(self)
+        -- on the symbol layers the shift key switches symbol pages: "=\<" / "?123" (.kb-t), not a shift
+        local sym_shift = self.keyboard.symbolmode and (self.label == SHIFT or self.label == CAPS)
+        if sym_shift then k = "fn" end
         local w, h = self.width, self.height
         local fg = (k == "fn") and "text-2" or (k == "enter" and "accent-ink") or (k == "caps" and "bg") or "text"
         local bg = ({ fn = "surface-3", enter = "accent", caps = "text" })[k] or "surface"
@@ -192,13 +196,19 @@ function M.apply(L)
         if k == "enter" then
             local submits = self.keyboard.inputbox and self.keyboard.inputbox.enter_callback
             if submits then
-                label = TextWidget:new{ text = require("gettext")("Done"), face = L.face("ui-semibold", "fs-md"), fgcolor = T.color(fg) }
+                -- the field may name its action (a search field: "Search"); else "Done"
+                local t = self.keyboard.inputbox._leaf_enter_label or require("gettext")("Done")
+                label = TextWidget:new{ text = t, face = L.face("ui-semibold", "fs-md"), fgcolor = T.color(fg) }
             else
                 icon = "leaf.kb.enter"
             end
         end
         local kb = self.keyboard
-        if not label and kb.symbolmode_keys[self.label] ~= nil then
+        if not label and sym_shift then
+            local arabic = (kb.getKeyboardLayout and kb:getKeyboardLayout() or ""):match("^ar")
+            local text = kb.shiftmode and (arabic and "?١٢٣" or "?123") or "=\\<"
+            label = TextWidget:new{ text = text, face = L.face("ui-semibold", "fs-sm"), fgcolor = T.color(fg) }
+        elseif not label and kb.symbolmode_keys[self.label] ~= nil then
             -- the symbols key reads ?123 / ABC (.kb-t)
             local arabic = (kb.getKeyboardLayout and kb:getKeyboardLayout() or ""):match("^ar")
             local text = kb.symbolmode and (arabic and "أبج" or "ABC") or (arabic and "?١٢٣" or "?123")
