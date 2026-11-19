@@ -37,6 +37,7 @@ L.MODULES = {
     "confirm",
     "menu",
     "lists",
+    "plus",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

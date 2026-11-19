@@ -81,6 +81,19 @@ MAP = {
     "leaf.minus": "minus",  # Leaf's own: slider-row step button (KOReader has no minus icon)
     # Leaf's own: on-screen keyboard function keys (prototype keyboardHTML)
     "leaf.trash": "trash-2",
+    # Leaf's own: the library "+" popover (prototype overlay "plus")
+    "leaf.plus.select": "square-check",
+    "leaf.plus.newfolder": "folder-plus",
+    "leaf.plus.paste": "clipboard-paste",
+    "leaf.plus.sethome": "house",
+    "leaf.plus.gohome": "folder-root",
+    "leaf.plus.random": "shuffle",
+    "leaf.plus.shortcuts": "folder-symlink",
+    "leaf.plus.addshortcut": "bookmark-plus",
+    "leaf.plus.delshortcut": "bookmark-minus",
+    "leaf.plus.cache": "database-zap",
+    "leaf.plus.settings": "settings",
+    "leaf.plus.action": "circle-dot",
     # Leaf's own: menu rows the keyword table had no icon for
     "leaf.mi.play": "play",
     "leaf.mi.toc": "list-tree",
