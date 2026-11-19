@@ -771,6 +771,9 @@ function LIB.seed()
             local fm = FM()
             if fm then fm:onRefresh() end
         end)
+    end
+end
+
 -- reader scenes need their book: every scene from "reader" on is an EPUB scene, from "reader-pdf" on a PDF one
 do
     local kind
