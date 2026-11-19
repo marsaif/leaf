@@ -516,6 +516,48 @@ local SCENES = {
     { "ts-pdf-reflow", function() ts_open("reflow") end },
     { "ts-pdf-contrast", function() ts_open("contrast") end },
     { "ts-pdf-doc", function() ts_open("doc") end },
+    -- reader extras scenes (frontlight, go to, skim, book map, page browser, book end, page header)
+    { "reader-page", function()
+        -- a text page with a chapter title, so the page header has something to show
+        RUI():handleEvent(require("ui/event"):new("GotoPage", 12))
+    end, keep = true, wait = 2 },
+    { "frontlight", function()
+        -- desktop has no frontlight: pretend the device has one with warmth while the sheet is up
+        local Device = require("device")
+        local has_fl, has_nl = Device.hasFrontlight, Device.hasNaturalLight
+        Device.hasFrontlight = function() return true end
+        Device.hasNaturalLight = function() return true end
+        local powerd = Device:getPowerDevice()
+        powerd:setIntensity(62)
+        powerd:setWarmth(35)
+        local ok, err = pcall(function() Device:showLightDialog() end)
+        Device.hasFrontlight, Device.hasNaturalLight = has_fl, has_nl
+        if not ok then error(err) end
+    end },
+    { "frontlight-stock", function()
+        local Device = require("device")
+        local has_nl = Device.hasNaturalLight
+        Device.hasNaturalLight = function() return true end
+        local ok, err = pcall(function() UIManager:show(require("ui/widget/frontlightwidget"):new{}) end)
+        Device.hasNaturalLight = has_nl
+        if not ok then error(err) end
+    end },
+    { "goto", function() RUI().gotopage:onShowGotoDialog() end },
+    { "goto-typed", function()
+        RUI().gotopage:onShowGotoDialog()
+        local w = UIManager._window_stack[#UIManager._window_stack].widget
+        if w.leaf_key then for _, k in ipairs({ "4", "0" }) do w:leaf_key(k) end end
+    end },
+    { "skim", function() RUI().gotopage:onShowSkimtoDialog() end },
+    { "skim-moved", function()
+        RUI().gotopage:onShowSkimtoDialog()
+        local w = UIManager._window_stack[#UIManager._window_stack].widget
+        if w.goToPage then w:goToPage(w.curr_page + 10) end
+    end },
+    { "bookmap", function() RUI().thumbnail:onShowBookMap() end, wait = 3 },
+    { "bookmap-overview", function() RUI().thumbnail:onShowBookMap(true) end, wait = 3 },
+    { "pagebrowser", function() RUI().thumbnail:onShowPageBrowser() end, wait = 5 },
+    { "bookend", function() RUI().status:onEndOfBook() end, wait = 2 },
 }
 
 -- lookup scenes: helpers

@@ -52,6 +52,12 @@ L.MODULES = {
     "search",
     "wifi",
     "system",
+    -- reader extras
+    "frontlight",
+    "gotoskim",
+    "bookmap",
+    "bookend",
+    "pageheader",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
