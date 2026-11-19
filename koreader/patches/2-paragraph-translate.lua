@@ -87,6 +87,8 @@ end
 -- ---------------------------------------------------------------------------
 -- Panel: English paragraph (small, grey) above its Arabic translation,
 -- with Previous / Define / Next buttons. Square, thin border (Kindle style).
+-- With Leaf on, leaf/lookup.lua draws it instead (prototype "translate"): EN paragraph (tap a
+-- word = dictionary) over the Arabic, "In this edition / Machine" source switch, copy, define.
 -- ---------------------------------------------------------------------------
 local Blitbuffer = require("ffi/blitbuffer")
 local ButtonTable = require("ui/widget/buttontable")
@@ -130,13 +132,30 @@ local function neighbor(doc, block, delta)
     end
 end
 
-local function translate(doc, block, para)
-    local ok, arabic = pcall(offline_translation, doc, block)
-    if ok and arabic then return arabic end
-    -- other books: online translation (blocks briefly; needs internet)
-    local ok2, online = pcall(Translator.translate, Translator, para, TARGET_LANG)
-    if ok2 and type(online) == "string" and online ~= "" then return online end
+-- online translation (blocks briefly; needs internet)
+local function machine_translation(para)
+    local ok, online = pcall(Translator.translate, Translator, para, TARGET_LANG)
+    if ok and type(online) == "string" and online ~= "" then return online end
     return nil
+end
+
+-- -> arabic text or nil, has_book (the book carries its own translation), source used
+-- src: "book" (default when the book has one) or "machine"
+local function translate(doc, block, para, src)
+    local ok, arabic = pcall(offline_translation, doc, block)
+    local has_book = ok and arabic ~= nil
+    if has_book and src ~= "machine" then return arabic, true, "book" end
+    -- other books (or Machine picked): online translation
+    return machine_translation(para), has_book, "machine"
+end
+
+-- the Leaf look (koreader/leaf/lookup.lua), when Leaf is loaded
+local function leaf_lookup()
+    local L = package.loaded["leaf/core"]
+    if L and L.status and L.status.lookup == true then
+        local ok, mod = pcall(require, "leaf/lookup")
+        if ok and mod.build_translate then return mod end
+    end
 end
 
 local Panel = InputContainer:extend{
@@ -159,7 +178,16 @@ function Panel:init()
 end
 
 function Panel:build()
-    local arabic = translate(self.doc, self.block, self.para)
+    local arabic, has_book, src = translate(self.doc, self.block, self.para, self.src)
+    local leaf = leaf_lookup()
+    if leaf then
+        self.arabic, self.has_book, self.src = arabic, has_book, src
+        self.prev_ok = neighbor(self.doc, self.block, -1) ~= nil
+        self.next_ok = neighbor(self.doc, self.block, 1) ~= nil
+        local ok, err = pcall(leaf.build_translate, self)
+        if ok then return end
+        logger.err("paragraph-translate: Leaf panel failed, using the plain one:", err)
+    end
     local body
     if arabic then
         body = '<p class="ar" dir="rtl">' .. html_escape(arabic):gsub("\n", "<br/>") .. '</p>'
@@ -223,6 +251,22 @@ function Panel:build()
     self[1] = BottomContainer:new{ dimen = self.dimen, self.frame }
 end
 
+-- Leaf panel actions
+function Panel:setSource(src)
+    self.src = src
+    self:build()
+    UIManager:setDirty(self, "ui")
+end
+
+function Panel:define(word)
+    word = word or self.word
+    if not word or word == "" then
+        word = (self.para or ""):match("%a[%a'-]+") or ""
+    end
+    self:onClose()
+    self.ui.dictionary:onLookupWord(word)
+end
+
 function Panel:go(delta)
     local xp, text = neighbor(self.doc, self.block, delta)
     if not xp then return end
@@ -241,7 +285,8 @@ function Panel:onCloseWidget()
 end
 
 function Panel:onTapClose(arg, ges)
-    if self.frame.dimen and ges.pos:notIntersectWith(self.frame.dimen) then
+    local rect = self.frame_rect or self.frame.dimen
+    if rect and ges.pos:notIntersectWith(rect) then
         self:onClose()
     end
     return true

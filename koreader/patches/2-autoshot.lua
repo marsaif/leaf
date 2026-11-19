@@ -39,6 +39,8 @@ end
 local function show(mod, args) UIManager:show(require(mod):new(args)) end
 local noop = function() end
 
+local LK = {} -- lookup scenes: helpers, defined below the list
+
 local SCENES = {
     { "fm", noop },
     { "menu", function() FM().menu:onShowMenu() end },
@@ -254,7 +256,106 @@ local SCENES = {
             if block then UIManager:show(Panel:new{ ui = ui, doc = doc, block = block, para = para, word = "farm" }) end
         end)
     end, wait = 7 },
+
+    -- lookup scenes (leaf/lookup.lua): the bilingual Animal Farm, Chapter I, a selection mid-page
+    { "lk-open", function()
+        local book = G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub"
+        local function chapter_one()
+            local ui = RUI()
+            for _, t in ipairs(ui.toc.toc or {}) do
+                if t.title:find("Chapter I", 1, true) then ui.rolling:onGotoXPointer(t.xpointer) break end
+            end
+        end
+        if RUI() then
+            RUI():switchDocument(book, true)
+        else
+            require("apps/reader/readerui"):showReader(book)
+        end
+        UIManager:scheduleIn(3, chapter_one)
+    end, keep = true, wait = 5 },
+    { "lk-hl-popup", function() LK.select(0.30, 0.34) RUI().highlight:onShowHighlightMenu() end },
+    { "lk-hl-popup-low", function() LK.select(0.80, 0.82) RUI().highlight:onShowHighlightMenu() end },
+    { "lk-hl-edit", function()
+        local hl = RUI().highlight
+        LK.select(0.42, 0.44)
+        local index = hl:saveHighlight()
+        hl:clear()
+        local item = RUI().annotation.annotations[index]
+        item.note = "Irony starts here: the animals' dream, before the pigs."
+        item.drawer = "underscore"
+        UIManager:setDirty(RUI().dialog, "ui")
+        hl:showHighlightNoteOrDialog(index)
+        LK.cleanup = function() hl:deleteHighlight(RUI().annotation:getItemIndex(item) or index) end
+    end },
+    { "lk-dict", function()
+        local ui = RUI()
+        local hl = ui.highlight
+        LK.select(0.30, 0.30, true)
+        ui.dictionary.highlight = hl
+        ui.dictionary:showDict("answered", {
+            { dict = "Oxford Dictionary of English", word = "answered", definition =
+                "answer (verb)\n1. Say or write something to deal with or as a reaction to someone or something.\n   “he answered without hesitation”\n2. Act in reaction to a signal, such as a doorbell or telephone.\n   “she answered the phone”\n3. Be responsible or report to.\n   “he answers to the board”" },
+            { dict = "Wiktionary EN→AR (offline)", word = "answered", definition = "أجاب، ردّ\n(verb) past of answer" },
+            { dict = "WordNet 3.1", word = "answered", definition = "(v) answer: react verbally\n(v) answer: give the correct answer or solution to\n(v) answer: be liable or accountable" },
+            { dict = "Al-Mawrid Mini", word = "answer", definition = "جواب، ردّ؛ أجاب" },
+        }, LK.word_boxes())
+    end },
+    { "lk-dict-empty", function()
+        local ui = RUI()
+        LK.select(0.30, 0.30, true)
+        ui.dictionary:onLookupWord("answered", false, LK.word_boxes(), ui.highlight)
+    end, wait = 3 },
+    { "lk-wiki", function()
+        local ui = RUI()
+        ui.wikipedia:initLanguages("Animal Farm")
+        ui.wikipedia.wiki_languages = { "en", "ar", "fr" }
+        ui.wikipedia:showDict("Animal Farm", {
+            { dict = "Wikipedia EN", word = "Animal Farm", lang = "en", definition =
+                "Animal Farm (originally Animal Farm: A Fairy Story) is a satirical allegorical novella, in the form of a beast fable, by George Orwell, first published in England on 17 August 1945. It tells the story of a group of anthropomorphic farm animals who rebel against their human farmer, hoping to create a society where the animals can be equal, free, and happy. Ultimately, the rebellion is betrayed, and under the dictatorship of a pig named Napoleon, the farm ends up in a state as bad as it was before.\n(full article : 64 kB, = 9 x this intro length)" },
+        })
+    end },
+    { "lk-translate", function()
+        local hl = RUI().highlight
+        LK.select(0.30, 0.30, true)
+        hl:lookupDictWord()
+    end },
+    { "lk-footnote", function()
+        local ui = RUI()
+        local FootnoteWidget = require("ui/widget/footnotewidget")
+        local popup
+        popup = FootnoteWidget:new{
+            html = "<p><sup>1</sup> Middle White: a breed of pig. Old Major, the prize boar, was exhibited under the name of Willingdon Beauty, a show name that the farm still remembered with some pride.</p>",
+            doc_font_name = ui.font.font_face,
+            doc_font_size = Screen:scaleBySize(ui.document.configurable.font_size),
+            doc_margins = ui.document:getPageMargins(),
+            follow_callback = function() UIManager:close(popup) end,
+            dialog = ui,
+        }
+        UIManager:show(popup)
+    end },
 }
+
+-- lookup scenes: helpers
+-- select the text between two heights of the page (fractions), like a long-press + drag
+function LK.select(y0, y1, word)
+    local ui = RUI()
+    local hl = ui.highlight
+    local W, H = Screen:getWidth(), Screen:getHeight()
+    local p0 = { x = math.floor(W * (word and 0.45 or 0.12)), y = math.floor(H * y0) }
+    local p1 = { x = math.floor(W * (word and 0.45 or 0.72)), y = math.floor(H * y1) }
+    hl:clear()
+    hl.hold_pos = ui.view:screenToPageTransform(p0)
+    if word then
+        local w = ui.document:getWordFromPosition(p0, true)
+        hl.selected_text = { text = w.word, pos0 = w.pos0, pos1 = w.pos1, sboxes = { w.sbox } }
+    else
+        hl.selected_text = ui.document:getTextFromPositions(p0, p1)
+    end
+    ui.view.highlight.temp[hl.hold_pos.page] = hl.selected_text.sboxes
+    UIManager:setDirty(ui.dialog, "ui")
+end
+function LK.word_boxes() return RUI().highlight.selected_text.sboxes end
+
 
 local wanted = os.getenv("KO_AUTOSHOT_SCENES")
 local list = {}
@@ -291,6 +392,8 @@ local function run(i)
         UIManager:forceRePaint()
         Screen:shot(string.format("%s/%s%s.png", path, scene[1], suffix))
         if not scene.keep then close_above(depth) end
+        if LK and LK.cleanup then pcall(LK.cleanup) LK.cleanup = nil end
+        if LK and RUI() and RUI().highlight then RUI().highlight:clear() end
         UIManager:scheduleIn(0.5, function() run(i + 1) end)
     end)
 end

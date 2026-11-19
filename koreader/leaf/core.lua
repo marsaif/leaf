@@ -45,6 +45,7 @@ L.MODULES = {
     "booksheet",
     "bookdetails",
     "kvpages",
+    "lookup",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
