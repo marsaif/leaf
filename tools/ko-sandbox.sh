@@ -13,8 +13,8 @@
 #   tools/ko-sandbox.sh --stock         # Leaf off (LEAF_DISABLE=1): the same sandbox with stock-looking UI
 #   tools/ko-sandbox.sh -- FILE         # anything after -- is passed to KOReader (e.g. a book to open)
 #
-# The repo's koreader/{patches,icons,leaf,fonts/leaf} and defaults.custom.lua are SYMLINKED in,
-# so edits show up on the next launch. Books and the Project: Title plugin are COPIED once,
+# The repo's koreader/{patches,icons,leaf} and defaults.custom.lua are SYMLINKED in and fonts/leaf is
+# copied on every launch (see the fonts note below): edits show up on the next launch. Books and the Project: Title plugin are COPIED once,
 # because KOReader writes sidecars / caches next to them.
 set -euo pipefail
 
@@ -102,7 +102,14 @@ link() { rm -rf "$2"; ln -s "$1" "$2"; }
 link "$REPO/koreader/patches" "$HOME_DIR/patches"
 link "$REPO/koreader/icons" "$HOME_DIR/icons"
 link "$REPO/koreader/leaf" "$HOME_DIR/leaf"
-link "$REPO/koreader/fonts/leaf" "$HOME_DIR/fonts/leaf"
+# fonts: on the Kindle the data dir IS the install dir, so koreader/fonts/leaf is in KOReader's own
+# font folder. Desktop KOReader only scans $XDG_DATA_HOME/fonts (+ system fonts) for extra fonts,
+# so the sandbox gets its own XDG_DATA_HOME with a COPY (the scanner skips symlinked folders).
+XDG="$SB/xdg"
+mkdir -p "$XDG/fonts"
+rm -rf "$XDG/fonts/leaf"; cp -r "$REPO/koreader/fonts/leaf" "$XDG/fonts/leaf"
+[ -d "$HOME_DIR/fonts/source" ] && [ ! -d "$XDG/fonts/source" ] && cp -r "$HOME_DIR/fonts/source" "$XDG/fonts/source"
+export XDG_DATA_HOME="$XDG"
 link "$REPO/koreader/defaults.custom.lua" "$HOME_DIR/defaults.custom.lua"
 
 export KO_HOME="$HOME_DIR"

@@ -23,6 +23,7 @@ local L = {
 
 -- order matters: fonts and sizes must be set before any widget class reads them
 L.MODULES = {
+    "fonts",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
@@ -72,6 +73,7 @@ function L.load()
         L.log("widgets loaded before Leaf:", #early > 0 and table.concat(early, ", ") or "none")
     end
     L.T = require("leaf/tokens")
+    L.T.scale = G_reader_settings:readSetting("leaf_ui_scale") or 1
     for _, name in ipairs(L.MODULES) do
         local ok, err = pcall(function()
             local mod = require("leaf/" .. name)
