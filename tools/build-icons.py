@@ -81,6 +81,16 @@ MAP = {
     "leaf.minus": "minus",  # Leaf's own: slider-row step button (KOReader has no minus icon)
     # Leaf's own: on-screen keyboard function keys (prototype keyboardHTML)
     "leaf.trash": "trash-2",
+    # Leaf's own: reader chrome (prototype overlay "reader-chrome")
+    "leaf.rd.prev": "skip-back",
+    "leaf.rd.next": "skip-forward",
+    "leaf.rd.contents": "list-ordered",
+    "leaf.rd.typeset": "a-large-small",
+    "leaf.rd.light": "sun",
+    "leaf.rd.notes": "pen-line",
+    "leaf.rd.more": "ellipsis",
+    "leaf.rd.bookmark": "bookmark",
+    "leaf.rd.bookmarked": (["bookmark"], {"fill": "#000000"}),
     # Leaf's own: the library "+" popover (prototype overlay "plus")
     "leaf.plus.select": "square-check",
     "leaf.plus.newfolder": "folder-plus",

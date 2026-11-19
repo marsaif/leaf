@@ -39,6 +39,7 @@ L.MODULES = {
     "lists",
     "plus",
     "library",
+    "reader_chrome",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

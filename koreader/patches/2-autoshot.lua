@@ -166,6 +166,10 @@ local SCENES = {
     { "readermenu", function() RUI().menu:onShowMenu() end },
     { "readerconfig", function() RUI().config:onShowConfigMenu() end },
     { "toc", function() RUI().toc:onShowToc() end },
+    { "chrome", function()
+        local ok, chrome = pcall(require, "leaf/reader_chrome")
+        if ok and chrome.show then chrome.show(RUI()) end
+    end },
     { "bookmarks", function() RUI().bookmark:onShowBookmark() end },
 }
 
