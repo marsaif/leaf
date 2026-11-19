@@ -26,3 +26,5 @@ Each module loads under `pcall`, and overridden methods fall back to KOReader's 
 **Turn Leaf off** without deleting anything: create an empty file `koreader/leaf.disabled` (on the Kindle: `/mnt/us/koreader/leaf.disabled`).
 `koreader/leaf/tokens.lua` is generated: edit `prototype/css/tokens.css`, then run `python3 tools/tokens2lua.py`.
 The pre-Leaf style patches are kept, not loaded, in `koreader/patches/legacy/`.
+Test card: `tools/ko-sandbox.sh --shots DIR --scenes catalog` renders `koreader/leaf/catalog.lua`, the prototype's `#/catalog` rebuilt from real KOReader widgets.
+Icons and the check/radio marks are generated: `python3 tools/build-icons.py`; fonts: `tools/build-fonts.sh`.
