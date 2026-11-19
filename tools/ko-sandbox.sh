@@ -10,6 +10,7 @@
 #                                       # no window: render offscreen at full Kindle size (unless --proto),
 #                                       # screenshot each scene into DIR and quit
 #                                       # (scene list: koreader/patches/2-autoshot.lua)
+#   tools/ko-sandbox.sh --stock         # Leaf off (LEAF_DISABLE=1): the same sandbox with stock-looking UI
 #   tools/ko-sandbox.sh -- FILE         # anything after -- is passed to KOReader (e.g. a book to open)
 #
 # The repo's koreader/{patches,icons,leaf,fonts/leaf} and defaults.custom.lua are SYMLINKED in,
@@ -25,7 +26,7 @@ BOOKS="$SB/books"
 REAL="$HOME/.config/koreader"
 
 W=536 H=724 DPI=150 GEOM=""
-RESET=0 SHOTS="" SCENES="" NIGHT=0 ARGS=()
+RESET=0 SHOTS="" SCENES="" NIGHT=0 STOCK=0 ARGS=()
 while [ $# -gt 0 ]; do
     case "$1" in
         --proto) GEOM=proto ;;
@@ -34,6 +35,7 @@ while [ $# -gt 0 ]; do
         --shots) SHOTS="$(realpath -m "$2")"; shift ;;
         --scenes) SCENES="$2"; shift ;;
         --night) NIGHT=1 ;;
+        --stock) STOCK=1 ;;
         --) shift; ARGS=("$@"); break ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
@@ -104,6 +106,8 @@ link "$REPO/koreader/fonts/leaf" "$HOME_DIR/fonts/leaf"
 link "$REPO/koreader/defaults.custom.lua" "$HOME_DIR/defaults.custom.lua"
 
 export KO_HOME="$HOME_DIR"
+[ "$STOCK" = 1 ] && export LEAF_DISABLE=1
+export LEAF_DEBUG=1          # leaf/core.lua: log extra diagnostics
 export KO_SANDBOX_KINDLE=1   # koreader/patches/2-sandbox-kindle.lua: no keyboard, like the Kindle
 export EMULATE_READER_W=$W EMULATE_READER_H=$H EMULATE_READER_DPI=$DPI
 if [ -n "$SHOTS" ]; then
