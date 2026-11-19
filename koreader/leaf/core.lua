@@ -26,6 +26,7 @@ L.MODULES = {
     "fonts",
     "frames",
     "buttons",
+    "titlebar",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
