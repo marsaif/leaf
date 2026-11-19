@@ -31,6 +31,7 @@ L.MODULES = {
     "picker",
     "feedback",
     "sheets",
+    "inputs",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
