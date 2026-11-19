@@ -44,6 +44,12 @@ L.MODULES = {
     "typeset",
     "booksheet",
     "bookdetails",
+    -- reader extras
+    "frontlight",
+    "gotoskim",
+    "bookmap",
+    "bookend",
+    "pageheader",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
