@@ -309,6 +309,24 @@ MAP = {
     "leaf.sys.user": "user-round",
     "leaf.sys.titles": "book-copy",
     # -- end lookup and search
+    # -- menus, dialogs and system (polish): top-menu row icons, one per prototype menus.js ICONS name
+    **{f"leaf.mn.{n}": n for n in (
+        "a-large-small archive arrow-down-up arrow-left arrow-up-down arrow-up-right battery "
+        "battery-warning bell book-a book-open book-open-text bookmark bookmark-check bookmark-plus "
+        "bug camera chart-column circle-help clock cloud cloud-cog code compass copy cpu database "
+        "delete ellipsis eye-off file-code file-cog file-pen-line file-search file-text flag "
+        "folder-cog folder-up folders gallery-horizontal globe graduation-cap hand hash highlighter "
+        "history house info keyboard languages layers layout-grid library library-big life-buoy "
+        "link list list-checks list-tree log-out map map-pin maximize menu minus monitor "
+        "monitor-dot moon moon-star mouse newspaper palette panel-bottom panel-top pencil pilcrow "
+        "play power puzzle qr-code redo-2 refresh-cw rotate-ccw rotate-cw rss ruler save scan "
+        "search server settings settings-2 sliders-horizontal star sun sunset tablet-smartphone tag "
+        "terminal text-cursor text-search text-select timer timer-reset type undo-2 user-cog "
+        "wand-sparkles wifi zap zoom-in"
+    ).split()},
+    # white-on-accent marks (the connected Wi-Fi tile): drawn in --accent-ink
+    "leaf.sys.wifi.ink": ("wifi", {"stroke_color": "#ffffff"}),
+    # -- end menus, dialogs and system (polish)
 }
 
 KEEP_STOCK = {
@@ -355,12 +373,12 @@ def body(svg):
     return re.sub(r"\s+", " ", inner).strip()
 
 
-def render(lucide_svg, name, sw, fill="none"):
+def render(lucide_svg, name, sw, fill="none", stroke="#000000"):
     inner = re.search(r"<svg[^>]*>(.*)</svg>", lucide_svg, re.S).group(1).strip("\n")
-    inner = inner.replace("currentColor", "#000000")  # KOReader's SVG renderer: no currentColor
+    inner = inner.replace("currentColor", stroke)  # KOReader's SVG renderer: no currentColor
     return (f"<!-- Leaf: lucide-static v{LUCIDE_VERSION} \"{name}\" (ISC), stroke {sw}; built by tools/build-icons.py -->\n"
             f'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" '
-            f'fill="{fill}" stroke="#000000" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round">\n'
+            f'fill="{fill}" stroke="{stroke}" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round">\n'
             f"{inner}\n</svg>\n")
 
 
@@ -405,7 +423,7 @@ def main():
             report["missing_lucide"].append(f"{stock} -> {names}")
             continue
         w = stroke_width(opts["stroke"]) if "stroke" in opts else sw
-        out[f"{stock}.svg"] = render(lucide[hit], hit, w, opts.get("fill", "none"))
+        out[f"{stock}.svg"] = render(lucide[hit], hit, w, opts.get("fill", "none"), opts.get("stroke_color", "#000000"))
         report["mapped"].append(f"{stock} -> {hit}")
 
     out.update(controls())

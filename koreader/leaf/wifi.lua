@@ -95,10 +95,15 @@ function M.apply(L)
             local info = connected.info
             local cw = inner - 2 * pad
             local iw = K.inner(cw)
-            local tile = K.tile("leaf.sys.wifi", { size = "h-row", icon = "icon-md", round = true, bg = "accent-soft" })
+            -- .wf-cur tile: a filled accent circle, the icon in --accent-ink
+            local ts = T.px("h-row")
+            local tile = require("ui/widget/container/framecontainer"):new{
+                bordersize = 0, background = T.color("accent"), radius = math.floor(ts / 2), padding = 0,
+                require("ui/widget/container/centercontainer"):new{ dimen = K.geom(ts, ts),
+                    require("ui/widget/iconwidget"):new{ icon = "leaf.sys.wifi.ink", width = T.px("icon-md"), height = T.px("icon-md"),
+                        alpha = true } } }
             local tw = iw - tile:getSize().w - T.px("sp-3")
             local bits = { _("Connected"), security(info.flags), strength(info.signal_quality) }
-            local bw = math.floor((iw - T.px("sp-2")) / 3)
             local card = K.card(cw, VerticalGroup:new{ align = "left",
                 HorizontalGroup:new{ align = "center", tile, K.hspan("sp-3"),
                     VerticalGroup:new{ align = "left",
@@ -107,16 +112,27 @@ function M.apply(L)
                         HorizontalGroup:new{ align = "center", K.icon("leaf.sys.check", "icon-xs"), K.hspan("sp-1"),
                             K.text(table.concat(bits, " · "), "ui", "fs-sm", "text-2", tw - T.px("icon-xs")) } } },
                 K.vspan("sp-3"),
-                HorizontalGroup:new{ align = "center",
-                    K.button{ label = _("Disconnect"), kind = "secondary", width = bw, parent = self,
-                        callback = function() connected:disconnect() end },
-                    K.hspan("sp-2"),
-                    K.button{ label = _("Forget"), kind = "ghost", width = bw, parent = self,
+                (function()
+                    -- natural-width buttons, left-aligned: Disconnect · Details · Forget
+                    local g = HorizontalGroup:new{ align = "center",
+                        K.button{ label = _("Disconnect"), kind = "secondary", parent = self,
+                            callback = function() connected:disconnect() end } }
+                    if NetworkMgr.isNetworkInfoAvailable and NetworkMgr:isNetworkInfoAvailable() then
+                        table.insert(g, K.hspan("sp-2"))
+                        table.insert(g, K.button{ label = _("Details"), kind = "secondary", parent = self,
+                            callback = function()
+                                UIManager:broadcastEvent(require("ui/event"):new("ShowNetworkInfo"))
+                            end })
+                    end
+                    table.insert(g, K.hspan("sp-2"))
+                    table.insert(g, K.button{ label = _("Forget"), kind = "ghost", parent = self,
                         callback = function()
                             NetworkMgr:deleteNetwork(info)
                             info.password = nil
                             connected:disconnect()
-                        end } },
+                        end })
+                    return g
+                end)(),
             })
             table.insert(content, K.vspan("sp-3"))
             table.insert(content, HorizontalGroup:new{ K.hspan(pad), card })
@@ -144,8 +160,8 @@ function M.apply(L)
             table.insert(sub, security(info.flags))
             table.insert(sub, strength(info.signal_quality))
             table.insert(rows, K.row{ width = inner, height = row_h,
-                tile = signal_icon(info), tile_opts = { round = true, icon = "icon-tile" },
-                label = it.display_ssid, sub = table.concat(sub, " · "),
+                tile = signal_icon(info), tile_opts = { icon = "icon-tile", size = "hit" },
+                label = it.display_ssid, label_role = "ui-medium", sub = table.concat(sub, " · "),
                 trailing = secured and K.icon("leaf.sys.lock", "icon-sm", true) or nil,
                 callback = function()
                     if (info.flags or ""):find("WEP") then
@@ -161,7 +177,8 @@ function M.apply(L)
         if #rows == 0 then
             table.insert(rows, K.row{ width = inner, icon = "leaf.sys.wifi.off", label = _("No other networks found"), dim = true })
         end
-        table.insert(content, K.list(rows, inner))
+        -- separators start under the names (.ko-list rows with a tile)
+        table.insert(content, K.list(rows, inner, { inset = T.px("sp-5") + T.px("hit") + T.px("sp-3"), inset_right = 0 }))
         if pages > 1 then
             local CenterContainer = require("ui/widget/container/centercontainer")
             table.insert(content, CenterContainer:new{ dimen = K.geom(inner, T.px("h-row")),

@@ -2,8 +2,7 @@
     Leaf text input (safety-net item 13): InputDialog, MultiInputDialog, InputText.
     Replaces the pre-Leaf patch 2-dialogs.lua (patches/legacy/). Target: prototype overlay "input".
 
-    * Field (.kb-field--compact): soft filled --surface-2, --r-md corners, no outline (the cursor
-      shows the active field), Inter --fs-md, --sp-3 padding (44px tall).
+    * Field (.kb-field--compact): soft filled --surface-2, --r-md corners, a hairline ring (--border), Inter --fs-md, --sp-3 padding (44px tall).
     * Compact dialogs: the title (Leaf TitleBar) has no rule under it; width is the Leaf dialog width
       (min(86%, 400px)) unless the caller chose one. Fullscreen editors keep their layout.
     * Actions: buttons.lua's action row (right-aligned, the last one primary).
@@ -30,12 +29,34 @@ function M.apply(L)
         if not frame then return end
         frame.background = field_bg
         frame.radius = T.px("r-md")
-        frame.color = field_bg
+        -- .kb-field: --ring-inset hairline (stronger on the field being typed in when there are several)
+        frame.color = T.color("border")
         local tw = input.text_widget
         if tw then
             tw.bgcolor = field_bg
             if tw.text_widget then tw.text_widget.bgcolor = field_bg end -- ScrollTextWidget's inner box
         end
+    end
+
+    -- .dl-input.is-empty: the primary action looks unavailable (--disabled fill) until something is
+    -- typed; it stays tappable (KOReader decides what an empty value does)
+    local function primary_of(dialog)
+        local bt = dialog and dialog.button_table
+        local rows = bt and bt.buttons_layout
+        local row = rows and rows[#rows]
+        local b = row and row[#row]
+        if b and b._leaf_kind == "primary" and b.frame then return b end
+    end
+    local function sync_primary(dialog, input)
+        local b = primary_of(dialog)
+        if not b then return end
+        local empty = (input and input.text or "") == ""
+        if b._leaf_empty == empty then return end
+        b._leaf_empty = empty
+        local c = T.color((empty or not b.enabled) and "disabled" or "accent")
+        b.frame.background = c
+        b.frame.color = c
+        if b[1] and b[1].dimen then b:refresh() end
     end
 
     L.wrap(InputText, "initTextBox", function(orig, self, ...)
@@ -45,6 +66,8 @@ function M.apply(L)
         TextBoxWidget.bgcolor = saved
         if not ok then error(err, 0) end
         style_field(self)
+        local d = self.parent
+        if type(d) == "table" and d._leaf_compact and not self.for_measurement_only then sync_primary(d, self) end
     end, "InputText:initTextBox")
     for _, name in ipairs({ "focus", "unfocus" }) do
         if InputText[name] then
@@ -75,12 +98,27 @@ function M.apply(L)
             o = o or {}
             o.with_bottom_line = false
             o.title_h_padding = 0
+            o.bottom_v_padding = o.bottom_v_padding or T.px("sp-3") -- .kb-field--compact margin-top
             return orig_new(class, o)
         end
         local ok, err = pcall(orig, self)
         TitleBar.new = orig_new
         if not ok then error(err, 0) end
+        -- (one-line compact dialogs only: editors and multi-field dialogs keep their buttons as they are)
+        self._leaf_compact = not self.allow_newline and not self._added_widgets
+        if self._leaf_compact then sync_primary(self, self._input_widget) end
         local frame = self.dialog_frame
+        -- .ko-dialog-actions margin-top: --sp-4 between the field and the buttons
+        local vg = frame and frame[1]
+        if type(vg) == "table" and vg.resetLayout then
+            for k = #vg, 2, -1 do
+                if vg[k][1] == self.button_table and vg[k - 1].width and not vg[k - 1][1] then
+                    vg[k - 1].width = T.px("sp-4") - require("ui/size").padding.buttontable
+                    vg:resetLayout()
+                    break
+                end
+            end
+        end
         if frame then
             frame.padding_left = pad
             frame.padding_right = pad

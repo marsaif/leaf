@@ -83,6 +83,10 @@ function M.apply(L)
         return g
     end
 
+    -- shared with feedback.lua (the info dialog uses the same title / body split)
+    M.head = head
+    M.dialog_width = dialog_width
+
     local function frame(content, button_table)
         return FrameContainer:new{
             background = T.color("surface"), radius = Size.radius.window,

@@ -338,6 +338,20 @@ local SCENES = {
         if items and items.about then items.about.callback() else require("leaf/system").show_about() end
     end },
     { "quick", function() require("leaf/system").show_quick() end },
+    -- polish-ui scenes (menus, dialogs and system)
+    { "stats-month", function()
+        show("readerprogress", { dates = {}, current_duration = 1260, current_pages = 14,
+            today_duration = 2100, today_pages = 27, _leaf_range = "month" })
+    end },
+    { "input-filled", function()
+        local d
+        d = require("ui/widget/inputdialog"):new{ title = "Rename", input = "Animal Farm (EN-AR).epub",
+            buttons = {{ { text = "Cancel", id = "close", callback = function() UIManager:close(d) end },
+                { text = "Rename", is_enter_default = true, callback = noop } }} }
+        UIManager:show(d)
+        d:onShowKeyboard()
+    end },
+    -- end polish-ui scenes
     -- end system and tools scenes
     -- reader scenes replace the file manager: keep them last
     { "reader", function()

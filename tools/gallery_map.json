@@ -47,8 +47,8 @@
   "translate": "#/reader?id=animal-farm&o=translate",
   "stats": "#/stats?range=week",
   "search": "#/search",
-  "search-results": "#/search?q=animal&kb=0",
-  "search-book": "#/search?q=silence&scope=book",
+  "search-results": "#/search?q=or&kb=0",
+  "search-book": "#/search?q=silence&scope=book&kb=0",
   "wifi": "#/home?o=wifi",
   "wifi-password": "#/home?o=wifi&o.connect=Caf%C3%A9%20Lumi%C3%A8re",
   "sleep": "#/home?o=sleep",
@@ -60,5 +60,15 @@
   "search-last": "#/search?q=animal",
   "search-book-results": "#/search?q=silence&scope=book&kb=0",
   "input-sym": "#/home?o=input&o.title=Go%20to%20page&o.hint=Page%201%E2%80%93112&o.ok=Go",
-  "lk-translator": "#/reader?id=animal-farm&o=translate"
+  "lk-translator": "#/reader?id=animal-farm&o=translate",
+  "menu-sub": "#/library?o=main-menu&o.ctx=fm&o.tab=settings&o.path=%5B1%5D",
+  "multiconfirm": "#/home?o=confirm&o.title=A%20file%20with%20this%20name%20already%20exists.&o.ok=Replace",
+  "notify": "#/home?o=info&o.toast=Cache%20cleared%20%C2%B7%20142%20MB%20freed",
+  "kv-stats": "#/stats?range=week",
+  "textviewer-long": "#/reader?id=animal-farm&o=view-html&o.ch=0&o.pid=2&o.a=3&o.b=9",
+  "description": "#/library?o=info&o.title=Book%20description&o.body=A%20farm%20is%20taken%20over%20by%20its%20overworked%2C%20mistreated%20animals.",
+  "calendar": "#/stats?range=month",
+  "catalog-controls": "#/catalog?page=controls",
+  "stats-month": "#/stats?range=month",
+  "input-filled": "#/home?o=input&o.title=Rename&o.value=Animal%20Farm%20(EN-AR).epub&o.ok=Rename"
 }

@@ -108,6 +108,11 @@ function M.apply(L)
         frame._leaf_done = true
         frame.padding = T.px("sp-5")
         frame.background = T.color("surface")
+        -- text only (no image, no monospace, no fixed height): UI.dialog's title / body split
+        local C = require("leaf/confirm")
+        if not self.image and not self.monospace_font and not self.height and C.head and type(self.text) == "string" and #self.text < 600 then
+            frame[1] = C.head(self.text, C.dialog_width() - 2 * T.px("sp-5"), false)
+        end
         if self.dismissable and not self.height then
             local content = frame[1]
             local w = content:getSize().w

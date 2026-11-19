@@ -136,7 +136,7 @@ return function(L)
         local hh = T.px("h-header")
         local left = HorizontalGroup:new{ align = "center", K.hspan("sp-2") }
         if o.back then
-            table.insert(left, K.icon_button("chevron.left", o.back, o.parent))
+            table.insert(left, K.icon_button("leaf.kb.left", o.back, o.parent)) -- UI.screenHead back = arrow-left
         else
             table.insert(left, K.hspan("sp-3"))
         end
@@ -270,7 +270,7 @@ return function(L)
         local hair = T.px("hairline")
         return FrameContainer:new{
             bordersize = o.accent and 0 or hair, color = T.color("border"),
-            background = T.color(o.accent and "accent" or (o.bg or "surface-2")),
+            background = T.color(o.accent and "accent" or (o.bg or "bg")), -- .theme-paper .ko-icon-tile: --bg on white cards
             radius = o.round and math.floor(s / 2) or T.px("r-md"), padding = 0,
             CenterContainer:new{ dimen = geom(s - 2 * (o.accent and 0 or hair), s - 2 * (o.accent and 0 or hair)),
                 K.icon(icon, o.icon or "icon-tile") },
@@ -321,7 +321,8 @@ return function(L)
         local g = VerticalGroup:new{ align = "left" }
         for i, r in ipairs(rows) do
             if i > 1 and not o.no_lines then
-                table.insert(g, HorizontalGroup:new{ K.hspan(o.inset or T.px("sp-5")), K.line(width - 2 * (o.inset or T.px("sp-5"))) })
+                local l, r = o.inset or T.px("sp-5"), o.inset_right or o.inset or T.px("sp-5")
+                table.insert(g, HorizontalGroup:new{ K.hspan(l), K.line(width - l - r) })
             end
             table.insert(g, r)
         end
