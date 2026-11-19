@@ -165,6 +165,15 @@ local SCENES = {
     end, keep = true, wait = 4 },
     { "readermenu", function() RUI().menu:onShowMenu() end },
     { "readerconfig", function() RUI().config:onShowConfigMenu() end },
+    { "readerconfig-text", function()
+        RUI().config:onShowConfigMenu()
+        local d = RUI().config.config_dialog
+        if d then
+            for i, o in ipairs(d.config_options) do
+                if o.icon == "appbar.textsize" then d:handleEvent(require("ui/event"):new("ShowConfigPanel", i)) end
+            end
+        end
+    end },
     { "toc", function() RUI().toc:onShowToc() end },
     { "chrome", function()
         local ok, chrome = pcall(require, "leaf/reader_chrome")
