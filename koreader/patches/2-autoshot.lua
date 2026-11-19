@@ -153,6 +153,8 @@ local SCENES = {
     end, keep = true, wait = 4 },
     { "readermenu", function() RUI().menu:onShowMenu() end },
     { "readerconfig", function() RUI().config:onShowConfigMenu() end },
+    { "toc", function() RUI().toc:onShowToc() end },
+    { "bookmarks", function() RUI().bookmark:onShowBookmark() end },
 }
 
 local wanted = os.getenv("KO_AUTOSHOT_SCENES")

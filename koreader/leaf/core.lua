@@ -36,6 +36,7 @@ L.MODULES = {
     "keyboard",
     "confirm",
     "menu",
+    "lists",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
