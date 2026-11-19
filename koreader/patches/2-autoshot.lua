@@ -202,6 +202,38 @@ local SCENES = {
         show("ui/widget/textviewer", { title = "Page HTML", text_type = "code",
             text = '<section id="chapter-1" class="chapter">\n  <p class="para" id="p2">\n    The slow on for of Benjamin at the bright, such which Clover that could light old.\n  </p>\n</section>' })
     end },
+    -- library scenes
+    { "lib-library", function() require("leaf/library").showTab("library") end, wait = 3 },
+    { "lib-folders", function() require("leaf/library").showTab("folders") end, wait = 3 },
+    { "lib-detail", function()
+        require("leaf/library").showTab("library")
+        require("leaf/library").setView("detail")
+    end, wait = 3 },
+    { "lib-list", function() require("leaf/library").setView("list") end, wait = 3 },
+    { "lib-grid", function() require("leaf/library").setView("grid") end, wait = 3 },
+    { "lib-favorites", function()
+        local RC = require("readcollection")
+        local home = G_reader_settings:readSetting("home_dir")
+        for _i, f in ipairs({ "/Animal Farm.epub", "/Animal Farm (EN-AR).epub" }) do
+            if not RC:isFileInCollection(home .. f, RC.default_collection_name) then RC:addItem(home .. f, RC.default_collection_name) end
+        end
+        RC:write({ [RC.default_collection_name] = true })
+        require("leaf/library").showTab("favorites")
+    end, wait = 3 },
+    { "lib-collections", function() require("leaf/library").showTab("collections") end, wait = 2 },
+    { "lib-history", function()
+        local RH = require("readhistory")
+        local home = G_reader_settings:readSetting("home_dir")
+        for _i, f in ipairs({ "/KOReader UI Redesign Concept.pdf", "/Animal Farm (EN-AR).epub", "/Animal Farm.epub" }) do
+            RH:addItem(home .. f, os.time())
+        end
+        require("leaf/library").navigate("history")
+    end, wait = 3 },
+    { "lib-settings", function() require("leaf/library").navigate("settings") end, wait = 2 },
+    { "home", function()
+        require("leaf/library").closeOverlays()
+        require("leaf/home").show()
+    end, wait = 3 },
     { "catalog", function()
         local ok, catalog = pcall(require, "leaf/catalog")
         if ok then catalog.show() else logger.info("autoshot: no leaf/catalog yet") end
