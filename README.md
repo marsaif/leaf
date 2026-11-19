@@ -11,3 +11,11 @@ built as a plugin plus user patches on top of stock KOReader (no fork).
   (`python3 -m venv prototype/tools/.venv && prototype/tools/.venv/bin/pip install -r prototype/tools/requirements.txt`).
 
 Tested against KOReader **v2026.07.1**.
+
+## Desktop sandbox
+`tools/ko-sandbox.sh` runs the desktop KOReader (`~/Applications/koreader-linux`) with `KO_HOME=.sandbox/home`,
+so the real `~/.config/koreader` is never touched. The repo's `koreader/` patches, icons, `leaf/` and fonts are
+symlinked in; books, Project: Title and its config are copied once (`--reset` rebuilds it).
+
+- `tools/ko-sandbox.sh`: window at half the Kindle 11 size (536x724; same layout, sizes scale by the short side). `--full` 1072x1448, `--proto` 600x800 (the prototype's 6″ frame).
+- `tools/ko-sandbox.sh --shots DIR [--scenes fm,menu,...] [--night]`: renders offscreen at 1072x1448, screenshots every scene of `koreader/patches/2-autoshot.lua`, quits, and fails on Lua errors.

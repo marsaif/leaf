@@ -9,3 +9,5 @@ prototype/tools/audit-report.md
 prototype/tools/diff-report.md
 # local backups (git history replaces them)
 .backup*/
+# desktop KOReader sandbox (tools/ko-sandbox.sh)
+.sandbox/

@@ -1,18 +1,144 @@
--- Dev helper: if KO_AUTOSHOT=/path.png is set, save a screenshot shortly after start and quit.
--- KO_AUTOSHOT_ACTION=menu|plus opens that menu first.
+--[[
+    Dev helper (inert unless KO_AUTOSHOT is set): screenshot a list of scenes, then quit.
+    Driven by tools/ko-sandbox.sh --shots DIR [--scenes a,b] [--night].
+
+    KO_AUTOSHOT=/dir            one PNG per scene: <dir>/<scene>.png (<scene>-night.png in night mode)
+    KO_AUTOSHOT_SCENES=a,b,c    subset / order (default: every scene below, reader ones last)
+    KO_AUTOSHOT_NIGHT=1         turn night mode on first (Leaf Dark on e-ink = inverted Paper)
+    Legacy: KO_AUTOSHOT=/file.png [KO_AUTOSHOT_ACTION=menu|plus|newfolder|<titlebar button>]
+
+    Each scene opens something; after the shot every widget it added is closed again.
+--]]
 local path = os.getenv("KO_AUTOSHOT")
-if path then
-    local UIManager = require("ui/uimanager")
+if not path then return end
+
+local UIManager = require("ui/uimanager")
+local Screen = require("device").screen
+local logger = require("logger")
+
+local function FM() return require("apps/filemanager/filemanager").instance end
+local function RUI() return require("apps/reader/readerui").instance end
+
+-- legacy single-shot mode
+if path:match("%.png$") then
     local action = os.getenv("KO_AUTOSHOT_ACTION")
     UIManager:scheduleIn(3, function()
-        local FM = require("apps/filemanager/filemanager").instance
-        if action == "menu" then FM.menu:onShowMenu()
-        elseif action == "plus" then FM:onShowPlusMenu()
-        elseif action == "newfolder" then FM:createFolder()
-        elseif action and FM.title_bar[action] then FM.title_bar[action].callback() end
+        local fm = FM()
+        if action == "menu" then fm.menu:onShowMenu()
+        elseif action == "plus" then fm:onShowPlusMenu()
+        elseif action == "newfolder" then fm:createFolder()
+        elseif action and fm.title_bar[action] then fm.title_bar[action].callback() end
     end)
     UIManager:scheduleIn(5, function()
-        require("device").screen:shot(path)
+        Screen:shot(path)
         UIManager:quit()
     end)
+    return
 end
+
+local function show(mod, args) UIManager:show(require(mod):new(args)) end
+local noop = function() end
+
+local SCENES = {
+    { "fm", noop },
+    { "menu", function() FM().menu:onShowMenu() end },
+    { "plus", function() FM():onShowPlusMenu() end },
+    { "confirm", function() show("ui/widget/confirmbox", {
+        text = "Delete this book?\nThe file and its highlights, notes and reading progress will be removed.",
+        ok_text = "Delete", ok_callback = noop }) end },
+    { "multiconfirm", function() show("ui/widget/multiconfirmbox", {
+        text = "A file with this name already exists.",
+        choice1_text = "Keep both", choice1_callback = noop,
+        choice2_text = "Replace", choice2_callback = noop }) end },
+    { "info", function() show("ui/widget/infomessage", {
+        text = "No dictionaries installed.\nDownload one from Settings › Dictionary." }) end },
+    { "notify", function() require("ui/widget/notification"):notify("Cache cleared · 142 MB freed",
+        require("ui/widget/notification").SOURCE_ALWAYS_SHOW) end },
+    { "input", function()
+        local d
+        d = require("ui/widget/inputdialog"):new{
+            title = "New folder", input_hint = "Folder name",
+            buttons = {{
+                { text = "Cancel", id = "close", callback = function() UIManager:close(d) end },
+                { text = "Create", is_enter_default = true, callback = noop },
+            }},
+        }
+        UIManager:show(d)
+        d:onShowKeyboard()
+    end },
+    { "buttondialog", function() show("ui/widget/buttondialog", {
+        title = "Animal Farm",
+        buttons = {
+            { { text = "Open", callback = noop }, { text = "Book information", callback = noop } },
+            { { text = "Mark as finished", callback = noop }, { text = "Add to collection", callback = noop } },
+            { { text = "Delete", callback = noop }, { text = "Rename", callback = noop } },
+        } }) end },
+    { "spin", function() show("ui/widget/spinwidget", {
+        title_text = "Items per page", info_text = "Number of books shown on one page",
+        value = 14, value_min = 6, value_max = 24, default_value = 14, callback = noop }) end },
+    { "textviewer", function() show("ui/widget/textviewer", {
+        title = "Book description",
+        text = "A farm is taken over by its overworked, mistreated animals. With flaming idealism and stirring slogans, they set out to create a paradise of progress, justice, and equality." }) end },
+    { "keyvalue", function() show("ui/widget/keyvaluepage", {
+        title = "Book information",
+        kv_pairs = { { "Title", "Animal Farm" }, { "Author", "George Orwell" }, { "Format", "EPUB" },
+            { "Pages", "112" }, "----", { "Language", "en" }, { "Size", "412 KB" } } }) end },
+    { "catalog", function()
+        local ok, catalog = pcall(require, "leaf/catalog")
+        if ok then catalog.show() else logger.info("autoshot: no leaf/catalog yet") end
+    end },
+    -- reader scenes replace the file manager: keep them last
+    { "reader", function()
+        local book = G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub"
+        require("apps/reader/readerui"):showReader(book)
+    end, keep = true, wait = 4 },
+    { "readermenu", function() RUI().menu:onShowMenu() end },
+    { "readerconfig", function() RUI().config:onShowConfigMenu() end },
+}
+
+local wanted = os.getenv("KO_AUTOSHOT_SCENES")
+local list = {}
+if wanted then
+    local by_name = {}
+    for _, s in ipairs(SCENES) do by_name[s[1]] = s end
+    for name in wanted:gmatch("[^,%s]+") do
+        if by_name[name] then table.insert(list, by_name[name]) else logger.warn("autoshot: unknown scene", name) end
+    end
+else
+    list = SCENES
+end
+
+local night = os.getenv("KO_AUTOSHOT_NIGHT") and true or false
+local suffix = night and "-night" or ""
+
+local function close_above(depth)
+    local stack = UIManager._window_stack
+    while #stack > depth do
+        UIManager:close(stack[#stack].widget)
+    end
+end
+
+local function run(i)
+    local scene = list[i]
+    if not scene then
+        UIManager:scheduleIn(0.5, function() UIManager:quit() end)
+        return
+    end
+    local depth = #UIManager._window_stack
+    local ok, err = pcall(scene[2])
+    if not ok then logger.err("autoshot: scene", scene[1], "failed:", err) end
+    UIManager:scheduleIn(scene.wait or 1.5, function()
+        UIManager:forceRePaint()
+        Screen:shot(string.format("%s/%s%s.png", path, scene[1], suffix))
+        if not scene.keep then close_above(depth) end
+        UIManager:scheduleIn(0.5, function() run(i + 1) end)
+    end)
+end
+
+UIManager:scheduleIn(3, function()
+    if night and not Screen.night_mode then
+        Screen:toggleNightMode()
+        UIManager:setDirty("all", "full")
+    end
+    run(1)
+end)
