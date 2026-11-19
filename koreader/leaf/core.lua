@@ -42,6 +42,7 @@ L.MODULES = {
     "reader_chrome",
     "footer",
     "typeset",
+    "booksheet",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
