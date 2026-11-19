@@ -20,7 +20,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 KO_APP="${KO_APP:-$HOME/Applications/koreader-linux/bin/koreader}"
-SB="$REPO/.sandbox"
+SB="${LEAF_SANDBOX:-$REPO/.sandbox}"  # LEAF_SANDBOX=dir: a second, independent sandbox
 HOME_DIR="$SB/home"
 BOOKS="$SB/books"
 REAL="$HOME/.config/koreader"
