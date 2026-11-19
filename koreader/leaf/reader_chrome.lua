@@ -46,9 +46,13 @@ function M.apply(L)
     local Tool = InputContainer:extend{}
     function Tool:init()
         local s = T.px("icon-md")
+        -- .rd-aa: the Typeset tool shows "Aa" in Playfair semibold instead of an icon
+        local glyph = self.icon == "Aa"
+            and CenterContainer:new{ dimen = Geom:new{ w = s, h = s }, TextWidget:new{ text = "Aa", face = L.face("display-semibold", "fs-lg"), padding = 0 } }
+            or IconWidget:new{ icon = self.icon, width = s, height = s, alpha = true }
         local g = VerticalGroup:new{ align = "center",
-            IconWidget:new{ icon = self.icon, width = s, height = s, alpha = true },
-            VerticalSpan:new{ width = T.px("sp-1") },
+            glyph,
+            VerticalSpan:new{ width = Screen:scaleBySize(5 * T.scale) },
             TextWidget:new{ text = self.label, face = L.face("ui", "fs-xs"), fgcolor = T.color("text-2") } }
         self.dimen = Geom:new{ x = 0, y = 0, w = self.width, h = T.px("h-nav") }
         self[1] = CenterContainer:new{ dimen = Geom:new{ w = self.width, h = self.dimen.h }, g }
@@ -118,30 +122,38 @@ function M.apply(L)
         end
         table.insert(left, texts)
         left:resetLayout()
-        local top_h = math.max(T.px("h-header"), texts:getSize().h + 2 * T.px("sp-2"))
+        local top_h = math.max(T.px("hit") + T.px("sp-2"), texts:getSize().h + 2 * T.px("sp-2"))
         local top = FrameContainer:new{
             bordersize = 0, padding = 0, background = T.color("bg-raised"),
             VerticalGroup:new{
+                require("leaf/widgets/kit").status_strip(W),
                 OverlapGroup:new{ dimen = Geom:new{ w = W, h = top_h },
                     LeftContainer:new{ dimen = Geom:new{ w = W, h = top_h }, left },
                     RightContainer:new{ dimen = Geom:new{ w = W, h = top_h }, right } },
-                LineWidget:new{ dimen = Geom:new{ w = W, h = hair }, background = T.color("border-strong") } },
+                LineWidget:new{ dimen = Geom:new{ w = W, h = hair }, background = T.color("border") } },
         }
 
         ---------------------------------------------------------------- bottom bar
-        local page_text = TextWidget:new{ text = string.format("%d / %d", page, total), face = L.face("ui", "fs-sm"), fgcolor = T.color("text-3") }
-        local chap = TextWidget:new{ text = chapter or "", face = L.face("ui", "fs-sm"), fgcolor = T.color("text-2"),
-            max_width = W - 2 * side - page_text:getSize().w - T.px("sp-3") }
-        local info_h = T.px("h-chip")
-        local info = OverlapGroup:new{ dimen = Geom:new{ w = W, h = info_h },
-            LeftContainer:new{ dimen = Geom:new{ w = W, h = info_h }, HorizontalGroup:new{ HorizontalSpan:new{ width = side }, chap } },
-            RightContainer:new{ dimen = Geom:new{ w = W, h = info_h }, HorizontalGroup:new{ page_text, HorizontalSpan:new{ width = side } } } }
-
+        -- .rd-scrub: |◁  [chapter ······ page / pages]  ▷|
+        --                [── slider with chapter ticks ──]
         local prev = icon_button("leaf.rd.prev", send("GotoPrevChapter"))
         local nxt = icon_button("leaf.rd.next", send("GotoNextChapter"))
-        local slider_w = W - 2 * (T.px("sp-2") + prev:getSize().w + T.px("sp-1"))
+        local mid_w = W - 2 * (T.px("sp-2") + prev:getSize().w + T.px("sp-half")) - 2 * T.px("sp-1")
+        local page_text = TextWidget:new{ text = string.format("%d / %d", page, total), face = L.face("ui", "fs-sm"), fgcolor = T.color("text-3") }
+        local chap = TextWidget:new{ text = (chapter or ""):gsub("%s+", " "), face = L.face("ui", "fs-sm"), fgcolor = T.color("text-2"),
+            max_width = mid_w - page_text:getSize().w - T.px("sp-3") }
+        local info_h = chap:getSize().h + T.px("sp-1")
+        local info = OverlapGroup:new{ dimen = Geom:new{ w = mid_w, h = info_h },
+            LeftContainer:new{ dimen = Geom:new{ w = mid_w, h = info_h }, chap },
+            RightContainer:new{ dimen = Geom:new{ w = mid_w, h = info_h }, page_text } }
+        local ticks = {}
+        pcall(function()
+            for _i, t in ipairs(ui.toc:getTocTicksFlattened() or {}) do
+                if t > 1 and total > 1 then table.insert(ticks, (t - 1) / (total - 1)) end
+            end
+        end)
         local slider = LeafSlider:new{
-            width = slider_w, pct = total > 1 and (page - 1) / (total - 1) or 0, show_parent = self,
+            width = mid_w, pct = total > 1 and (page - 1) / (total - 1) or 0, show_parent = self, ticks = ticks,
             on_change = function(frac, final)
                 local target = math.max(1, math.min(total, math.floor(1 + frac * (total - 1) + 0.5)))
                 page_text:setText(string.format("%d / %d", target, total))
@@ -155,14 +167,15 @@ function M.apply(L)
         }
         self._slider = slider
         local skim = HorizontalGroup:new{ align = "center",
-            HorizontalSpan:new{ width = T.px("sp-2") }, prev, HorizontalSpan:new{ width = T.px("sp-1") },
-            slider, HorizontalSpan:new{ width = T.px("sp-1") }, nxt }
+            HorizontalSpan:new{ width = T.px("sp-2") }, prev, HorizontalSpan:new{ width = T.px("sp-half") + T.px("sp-1") },
+            VerticalGroup:new{ align = "left", info, slider },
+            HorizontalSpan:new{ width = T.px("sp-half") + T.px("sp-1") }, nxt }
 
         local tools = {
-            { "leaf.rd.contents", _("Contents"), send("ShowToc") },
-            { "leaf.rd.typeset", _("Typeset"), send("ShowConfigMenu") },
+            { "leaf.rd.listtree", _("Contents"), send("ShowToc") },
+            { "Aa", ui.paging and _("Page") or _("Typeset"), send("ShowConfigMenu") },
             { "leaf.rd.light", _("Light"), send("ShowFlDialog") },
-            { "leaf.rd.notes", _("Notes"), send("ShowBookmark") },
+            { "leaf.rd.highlighter", _("Notes"), send("ShowBookmark") },
             { "leaf.rd.more", _("More"), close_then(function() ui.menu:onShowMenu() end) },
         }
         local tw = math.floor(W / #tools)
@@ -176,7 +189,7 @@ function M.apply(L)
             VerticalGroup:new{ align = "left",
                 LineWidget:new{ dimen = Geom:new{ w = W, h = hair }, background = T.color("border-strong") },
                 VerticalSpan:new{ width = T.px("sp-2") },
-                info, skim,
+                skim,
                 VerticalSpan:new{ width = T.px("sp-1") },
                 LineWidget:new{ dimen = Geom:new{ w = W, h = hair }, background = T.color("border") },
                 toolbar },

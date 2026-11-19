@@ -9,6 +9,9 @@
     * Defaults (only for footers the user never configured): bar above the text, thin, chapter
       ticks, left-aligned, "·" separator.
     * Colours: text --page-2, track --page-line, fill --page-line-fill, ticks --page-tick.
+    * Painting: Leaf paints .rd-foot itself (text on the book's side margins, the current page in
+      --page-ink medium, a 2px line with 6px chapter ticks); KOReader keeps the footer's height,
+      visibility, taps and menu. footer.leaf_text = false restores KOReader's painting.
 --]]
 local _ = require("gettext")
 local T_ = require("ffi/util").template
@@ -35,6 +38,13 @@ function M.apply(L)
         if path:match("leaf/Inter%-Regular%.ttf$") then d.text_font_face = path break end
     end
 
+    -- "1 min", "12 min", "1 h 05 min" (the prototype's "… left in chapter")
+    local function human_duration(secs)
+        local m = math.max(1, math.floor(secs / 60 + 0.5))
+        if m < 60 then return T_(_("%1 min"), m) end
+        return T_(_("%1 h %2 min"), math.floor(m / 60), string.format("%02d", m % 60))
+    end
+
     local function leaf_text(self)
         local doc = self.ui.document
         local page = self.pageno or (self.ui.view and self.ui.view.state and self.ui.view.state.page) or 1
@@ -43,14 +53,12 @@ function M.apply(L)
         local left_pages = self.ui.toc and self.ui.toc:getChapterPagesLeft(page, true)
             or (doc and doc:getTotalPagesLeft(page)) or 0
         local when
-        if self.ui.statistics and self.ui.statistics.getTimeForPages then
-            local t = self.ui.statistics:getTimeForPages(left_pages)
-            -- no reading data yet gives "00:00": say pages instead
-            local empty = not t or t == "" or t == _("N/A") or not t:find("[1-9]")
-            if not empty then when = T_(_("%1 left in chapter"), t) end
+        local st = self.ui.statistics
+        if st and st.settings and st.settings.is_enabled and st.avg_time and st.avg_time == st.avg_time and st.avg_time > 0 then
+            when = T_(_("%1 left in chapter"), human_duration(left_pages * st.avg_time))
         end
         when = when or T_(_("%1 pages left in chapter"), left_pages)
-        return string.format("%d%% · %s", pct, when), string.format("%d / %d", page, total)
+        return string.format("%d%% · %s", pct, when), string.format("%d / %d", page, total), page, total
     end
 
     local function paint_colours(self)
@@ -73,6 +81,70 @@ function M.apply(L)
         orig(self, ...)
         paint_colours(self)
     end, "ReaderFooter:updateFooterFont")
+
+    -- Leaf paints the footer itself (.rd-foot): the text on the book's side margins, "4" in --page-ink
+    -- medium and " / 67" in --page-2, and a 2px line with 6px chapter ticks above it. KOReader keeps
+    -- the footer's height, visibility, taps and menu; footer.leaf_text = false gives its own painting.
+    local TextWidget = require("ui/widget/textwidget")
+    local Screen = require("device").screen
+    local function leaf_paint_ok(self)
+        local st = self.settings
+        return st.leaf_text ~= false and not self.has_no_mode and not st.disable_progress_bar
+            and st.progress_bar_position == "above" and self.footer_text
+    end
+    L.wrap(ReaderFooter, "paintTo", function(orig, self, bb, x, y)
+        if not leaf_paint_ok(self) then return orig(self, bb, x, y) end
+        local W, H = Screen:getWidth(), Screen:getHeight()
+        local fh = self:getHeight()
+        local left_m, right_m
+        if self.ui.rolling then
+            local m = self.ui.document:getPageMargins()
+            left_m, right_m = m.left, m.right
+        else
+            left_m = Screen:scaleBySize(16 * T.scale)
+            right_m = left_m
+        end
+        local inner = W - left_m - right_m
+        local face = L.face("ui", "fs-xs")
+        local left, _right, page, total = leaf_text(self)
+        local lw = TextWidget:new{ text = left, face = face, fgcolor = T.color("page-2"), max_width = math.floor(inner * 0.7) }
+        local pw = TextWidget:new{ text = tostring(page), face = L.face("ui-medium", "fs-xs"), fgcolor = T.color("page-ink") }
+        local ow = TextWidget:new{ text = " / " .. total, face = face, fgcolor = T.color("page-2") }
+        local th = lw:getSize().h
+        local text_y = y + H - T.px("sp-3") - th
+        local line_y = text_y - T.px("sp-2") - 2
+        -- clear the footer band (and the tick overhang above it) to the page colour
+        local top = math.min(y + H - fh, line_y - 2)
+        bb:paintRect(x, top, W, y + H - top, T.color("page"))
+        -- .rd-line: track, fill, chapter ticks
+        local lh = 2
+        bb:paintRoundedRect(x + left_m, line_y, inner, lh, T.color("page-line"), T.px("r-tick"))
+        local pct = self:getBookProgress() or 0
+        local fill = math.floor(inner * math.max(0, math.min(1, pct)) + 0.5)
+        if fill > 0 then bb:paintRoundedRect(x + left_m, line_y, fill, lh, T.color("page-line-fill"), T.px("r-tick")) end
+        local ticks = self.progress_bar and self.progress_bar.ticks
+        local last = self.progress_bar and self.progress_bar.last
+        if not ticks and self.settings.toc_markers and self.ui.toc then
+            last = self.ui.document:getPageCount()
+            -- (KOReader skips chapter markers on its thin bar: Leaf keeps them, cached per layout)
+            if not (self._leaf_ticks and self._leaf_ticks_n == last) then
+                self._leaf_ticks, self._leaf_ticks_n = self.ui.toc:getTocTicksFlattened(), last
+            end
+            ticks = self._leaf_ticks
+        end
+        if ticks and last and last > 0 then
+            for _i, t in ipairs(ticks) do
+                local tx = x + left_m + math.floor(inner * t / last)
+                bb:paintRect(tx, line_y - 2, 1, 6, T.color("page-tick"))
+            end
+        end
+        local base = text_y + lw:getBaseline()
+        lw:paintTo(bb, x + left_m, text_y)
+        local rx = x + W - right_m - pw:getSize().w - ow:getSize().w
+        pw:paintTo(bb, rx, base - pw:getBaseline())
+        ow:paintTo(bb, rx + pw:getSize().w, base - ow:getBaseline())
+        lw:free() pw:free() ow:free()
+    end, "ReaderFooter:paintTo")
 
     L.wrap(ReaderFooter, "_updateFooterText", function(orig, self, force_repaint, full_repaint)
         if self.settings.leaf_text == false or self.has_no_mode or not self.footer_text then

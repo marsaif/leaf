@@ -3,7 +3,8 @@
     segment is --surface with a --bw-md accent outline and an accent semibold label, the others
     --text-2. Each segment is at least --h-seg tall and splits the width evenly.
 
-    LeafSeg:new{ width = px, items = { {label=, key=}, ... }, selected = key, on_select = function(key) end }
+    LeafSeg:new{ width = px, items = { {label=, key= [, icon=]}, ... }, selected = key, on_select = function(key) end }
+    (an item's icon sits before its label, UI.seg({icon, label}); tinted like the label)
 --]]
 local CenterContainer = require("ui/widget/container/centercontainer")
 local FrameContainer = require("ui/widget/container/framecontainer")
@@ -34,7 +35,12 @@ function LeafSeg:init()
             background = T.color(on and "surface" or "surface-2"), radius = T.px("r-inner"),
             padding = 0, margin = 0,
             CenterContainer:new{ dimen = Geom:new{ w = cell_w - 2 * (on and T.px("bw-md") or 0), h = h - 2 * (on and T.px("bw-md") or 0) },
-                TextWidget:new{ text = it.label, face = L.face(on and "ui-semibold" or "ui", "fs-sm"),
+                it.icon and HorizontalGroup:new{ align = "center",
+                    require("leaf/widgets/kit").TintIcon:new{ icon = it.icon, size_token = "icon-sm", color = T.color(on and "accent" or "text-2") },
+                    HorizontalSpan:new{ width = T.px("sp-1h") },
+                    TextWidget:new{ text = it.label, face = L.face(on and "ui-semibold" or "ui", "fs-sm"),
+                        fgcolor = T.color(on and "accent" or "text-2"), max_width = cell_w - T.px("sp-2") - T.px("icon-sm") - T.px("sp-1h") } }
+                or TextWidget:new{ text = it.label, face = L.face(on and "ui-semibold" or "ui", "fs-sm"),
                     fgcolor = T.color(on and "accent" or "text-2"), max_width = cell_w - T.px("sp-2") } },
         }
         if i > 1 then table.insert(row, HorizontalSpan:new{ width = pad }) end

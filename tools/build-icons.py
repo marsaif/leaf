@@ -199,6 +199,14 @@ MAP = {
     "leaf.end.nextfile": "file-symlink",
     "leaf.end.library": "library-big",
     "leaf.end.review": "pen-line",
+    # reader polish: contents / bookmarks sheet, page browser, book map (prototype reader-panels.js)
+    "leaf.rd.listtree": "list-tree",
+    "leaf.rd.hash": "hash",
+    "leaf.rd.bmplus": "bookmark-plus",
+    "leaf.rd.bmminus": "bookmark-minus",
+    "leaf.rd.columns": "gallery-horizontal",
+    "leaf.rd.highlighter": "highlighter",
+    # end reader polish
     "edit": "pencil",
     "exit": "log-out",
     "home": "house",
