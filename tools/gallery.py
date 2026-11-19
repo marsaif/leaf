@@ -47,7 +47,8 @@ def main():
         print(__doc__)
         sys.exit(2)
     shots = Path(args[0])
-    out = Path(args[args.index("--out") + 1]) if "--out" in args else REPO / ".sandbox/gallery"
+    out = (Path(args[args.index("--out") + 1]) if "--out" in args else REPO / ".sandbox/gallery").resolve()
+    shots = shots.resolve()
     only = set(args[args.index("--only") + 1].split(",")) if "--only" in args else None
     refresh = "--refresh" in args
     (out / "proto").mkdir(parents=True, exist_ok=True)
