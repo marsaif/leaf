@@ -3,6 +3,7 @@
      input      ({title, hint, value, ok, action, checkbox, checked, layout, desc, cancel})
      confirm    ({title, body, ok, danger, icon, id, checkbox, action})
      info       ({title, body, list, ok, toast})  toast:true|"text" -> shown as App.toast instead
+     picker     ({title, desc, preset: items|spacing|margins|time, rows:[{label, value, min, max, step, unit, def, pad}], ok})
      frontlight (sheet)   quick (sheet)   wifi ({connect})   sleep ({preview})   about
    OK buttons call App.actions[params.action](el, value, {value, checked, params}) when given
    (value is the typed string for input, true for confirm); the dialog closes itself afterwards if still open.
@@ -91,6 +92,62 @@
         actions: [{ label: p.ok || "OK", kind: "primary", attrs: "data-close" }],
       });
     },
+  });
+
+  /* ---------------- picker: every numeric setting (KOReader SpinWidget, DoubleSpinWidget, DateTimeWidget) ----------------
+     {title, desc, preset, rows:[{label, value, min, max, step, unit, def, pad}], ok}
+     One UI.sliderRow per value (rule 13); "Default" restores the defaults; Cancel · Set on the right.
+     Two values (DoubleSpin: left/right margins) = two rows; a time (DateTime) = Hours + Minutes rows. */
+  const PICKERS = {
+    items: { title: "Items per page", desc: "Number of books shown on one page.", rows: [{ label: "", value: 14, min: 6, max: 24, step: 1, def: 14 }] },
+    spacing: { title: "Line spacing", desc: "Space between lines, as a percentage of the font size.", rows: [{ label: "", value: 120, min: 80, max: 200, step: 5, unit: "%", def: 100 }] },
+    margins: { title: "Page margins", desc: "Left and right margins, in pixels.", rows: [
+      { label: "Left", value: 18, min: 0, max: 80, step: 1, def: 15 }, { label: "Right", value: 18, min: 0, max: 80, step: 1, def: 15 }] },
+    time: { title: "Sleep timer", desc: "Put the device to sleep after this much idle time.", rows: [
+      { label: "Hours", value: 0, min: 0, max: 23, step: 1, def: 0, pad: 2 }, { label: "Minutes", value: 30, min: 0, max: 59, step: 1, def: 15, pad: 2 }] },
+  };
+  const pickerRows = (p) => {
+    if (!p._rows) {
+      const src = p.rows || (PICKERS[p.preset] || PICKERS.items).rows;
+      p._rows = src.map((r) => ({ step: 1, ...r, value: Number(r.value) }));
+    }
+    return p._rows;
+  };
+  const pkText = (r) => String(r.value).padStart(r.pad || 0, "0");
+  const pkPct = (r) => (r.max > r.min ? ((r.value - r.min) / (r.max - r.min)) * 100 : 0);
+  const pkSet = (i, v) => {
+    const r = pickerRows(topParams())[i];
+    r.value = Math.min(r.max, Math.max(r.min, Math.round((v - r.min) / r.step) * r.step + r.min));
+    App.renderLayers(true);
+  };
+  App.overlay("picker", {
+    title: "Picker", layer: "dialog",
+    render(p) {
+      const preset = PICKERS[p.preset] || {};
+      const rows = pickerRows(p);
+      const isDefault = rows.every((r) => r.def == null || r.value === r.def);
+      const defs = rows.filter((r) => r.def != null).map((r) => String(r.def).padStart(r.pad || 0, "0") + (r.unit || ""));
+      const range = rows.length === 1 ? `${rows[0].min}–${rows[0].max}${rows[0].unit || ""}` : "";
+      return UI.dialog({
+        cls: "dl-picker", title: p.title || preset.title || "Set value", sub: range && `Range ${range}`,
+        body: p.desc ?? preset.desc,
+        bodyHtml: `<div class="dl-pk-rows">${rows.map((r, i) => UI.sliderRow({ label: r.label || "", pct: pkPct(r), value: pkText(r), unit: r.unit,
+          slide: "pk-slide", step: "pk-step", id: "pk-" + i })).join("")}</div>`,
+        actions: [
+          ...(defs.length ? [{ label: `Default · ${defs.join(rows.length > 2 ? " " : (p.preset === "time" || rows[0]?.pad) ? ":" : " / ")}`, kind: "ghost", disabled: isDefault, attrs: { action: "pk-default" } }, '<span class="grow"></span>'] : []),
+          { label: "Cancel", kind: "ghost", attrs: "data-close" },
+          { label: p.ok || "Set", kind: "primary", attrs: { action: "pk-ok" } },
+        ],
+      });
+    },
+  });
+  App.action("pk-slide", (s, v) => { const i = Number(s.dataset.id.slice(3)), r = pickerRows(topParams())[i]; pkSet(i, r.min + v * (r.max - r.min)); });
+  App.action("pk-step", (el) => { const i = Number(el.dataset.id.slice(3)), r = pickerRows(topParams())[i]; pkSet(i, r.value + Number(el.dataset.dir) * r.step); });
+  App.action("pk-default", () => { pickerRows(topParams()).forEach((r) => { if (r.def != null) r.value = r.def; }); App.renderLayers(true); });
+  App.action("pk-ok", (el) => {
+    const p = topParams(), rows = pickerRows(p);
+    const text = rows.map((r) => pkText(r) + (r.unit || "")).join(p.preset === "time" ? ":" : " / ");
+    if (!runAction(el, p, rows.map((r) => r.value), false, "picker")) { App.close(); App.toast(`${p.title || (PICKERS[p.preset] || {}).title || "Value"} · ${text}`); }
   });
 
   /* ---------------- frontlight ---------------- */
@@ -355,6 +412,10 @@
   App.demo(G, "Confirm · Reset settings", H("home", { o: "confirm", "o.title": "Reset all settings?", "o.body": "Fonts, margins, gestures and menus return to their defaults. Books and highlights are not affected.", "o.ok": "Reset", "o.danger": true, "o.icon": "rotate-ccw" }));
   App.demo(G, "Info · message", H("home", { o: "info", "o.title": "Can't open this file", "o.body": "“comic-chapter-12.cbz” looks damaged or incomplete. Copy it to the device again, then retry." }));
   App.demo(G, "Info · as toast (result)", H("home", { o: "info", "o.toast": "Cache cleared · 142 MB freed" }));
+  App.demo(G, "Picker · single value", H("home", { o: "picker", "o.preset": "items" }));
+  App.demo(G, "Picker · percentage", H("home", { o: "picker", "o.preset": "spacing" }));
+  App.demo(G, "Picker · two values", H("home", { o: "picker", "o.preset": "margins" }));
+  App.demo(G, "Picker · time", H("home", { o: "picker", "o.preset": "time" }));
   App.demo(G, "Frontlight", H("home", { o: "frontlight" }));
   App.demo(G, "Quick settings", H("home", { o: "quick" }));
   App.demo(G, "Wi-Fi networks", H("home", { o: "wifi" }));
