@@ -206,7 +206,7 @@ function M.apply(L)
             end
         end
         -- breathing room under the actions (dialogs put no padding under their button table)
-        table.insert(c, VerticalSpan:new{ width = T.px("sp-4") })
+        table.insert(c, VerticalSpan:new{ width = T.px("sp-5") }) -- = the dialog's --sp-5 padding
         c:resetLayout()
     end, "ButtonTable:init")
 end

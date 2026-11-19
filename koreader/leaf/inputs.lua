@@ -23,6 +23,7 @@ function M.apply(L)
     local field_bg = T.color("surface-2")
     InputDialog.input_face = L.face("ui", "fs-md")
     InputDialog.input_padding = T.px("sp-3")
+    InputDialog.input_margin = 0 -- .kb-field--compact is 44px: no extra margin around the field
 
     local function style_field(input)
         local frame = input._frame_textwidget

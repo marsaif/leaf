@@ -88,6 +88,7 @@ function M.apply(L)
             orig(self) -- events, timeout, shrinking: all KOReader's
             local frame = toast_frame(self.text, 2)
             if frame then
+                self._leaf_toast = true -- no scrim behind a toast
                 self.movable = MovableContainer:new{ frame, unmovable = true }
                 self[1] = at_bottom(self.movable, 1, frame:getSize().h)
                 return

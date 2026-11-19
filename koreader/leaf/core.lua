@@ -32,6 +32,7 @@ L.MODULES = {
     "feedback",
     "sheets",
     "inputs",
+    "scrim",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
