@@ -1,0 +1,189 @@
+--[[
+    Leaf on-screen keyboard (safety-net item 14; prototype .kb, App.keyboardHTML).
+
+    * Dock: --bg-raised, --border-strong hairline on top, --sp-2 padding, --sp-1h gaps; keys are
+      exactly --h-row (48px) tall (KOReader sizes rows at 64px).
+    * Keys (.kb-key): --surface, --r-sm corners, --border-strong hairline, label Inter --fs-key.
+      Function keys (shift, symbols, backspace, globe, arrows): --surface-3, --text-2, Lucide icons.
+      An active shift/symbol key: --surface with a --bw-lg --text outline (.kb-shift.on); caps
+      lock: --text fill (.kb-shift.caps). Enter: accent; "Done" when Enter submits the field,
+      a return icon in multi-line fields. Long-press alternatives show small (--fs-2xs) top right.
+    KOReader still builds every key (size, callbacks, popups, swipes, layouts); only its drawing
+    is replaced.
+--]]
+local CenterContainer = require("ui/widget/container/centercontainer")
+local FrameContainer = require("ui/widget/container/framecontainer")
+local Geom = require("ui/geometry")
+local IconWidget = require("ui/widget/iconwidget")
+local OverlapGroup = require("ui/widget/overlapgroup")
+local RightContainer = require("ui/widget/container/rightcontainer")
+local TextWidget = require("ui/widget/textwidget")
+local VerticalGroup = require("ui/widget/verticalgroup")
+local VerticalSpan = require("ui/widget/verticalspan")
+
+local M = {}
+
+-- function-key labels used by KOReader's layouts (private-use glyphs of its symbol font)
+local SHIFT, CAPS, BACKSPACE = "\u{ED35}", "\u{ED31}", "\u{E76D}"
+local ICONS = {
+    [SHIFT] = "leaf.kb.shift",
+    [CAPS] = "leaf.kb.caps",
+    [BACKSPACE] = "leaf.kb.backspace",
+    ["🌐"] = "leaf.kb.globe",
+    ["←"] = "leaf.kb.left",
+    ["→"] = "leaf.kb.right",
+}
+local ENTER = "⮠"
+
+--[[ The Leaf English layout (prototype LAYOUTS.qwerty): three letter rows and a bottom row
+     ?123 · globe · , · space · . · enter; digits live on the ?123 layer. Built from KOReader's
+     English layout so every letter keeps its long-press accents. Layers: 1 upper, 2 lower,
+     3 symbols (shifted, prototype sym2), 4 symbols (prototype sym). ]]
+local function leaf_english(en)
+    local k = en.keys
+    local function chars(str)
+        local t = {}
+        for c in str:gmatch("[%z\1-\127\194-\244][\128-\191]*") do table.insert(t, c) end
+        return t
+    end
+    local function letters(row, sym, sym2, first, last)
+        local out = {}
+        for i = first or 1, last or #row do
+            local key = row[i]
+            table.insert(out, { key[1], key[2], sym2[#out + 1], sym[#out + 1] })
+        end
+        return out
+    end
+    local digits = {}
+    for i, key in ipairs(k[1]) do digits[i] = key[2] end -- KOReader's digit keys, with their popups
+    local row1 = letters(k[2], digits, chars("~`|•√π÷×¶∆"))
+    local row2 = letters(k[3], chars("@#€_&-+()"), chars("£¥$¢^°={}"), 1, 9)
+    local row3 = { k[4][1] }
+    for _, key in ipairs(letters(k[4], chars("*\"':;!?"), chars("%©®™✓[]"), 2, 8)) do table.insert(row3, key) end
+    table.insert(row3, k[4][9])
+    local bottom = {
+        k[5][1],                    -- ?123 (KOReader's symbols key)
+        k[5][2],                    -- globe
+        k[3][10],                   -- comma (with KOReader's popup)
+        { label = "_", " ", " ", " ", " ", width = 4.0 }, -- space
+        k[5][3],                    -- period (with KOReader's popup)
+        k[5][7],                    -- enter
+    }
+    local out = {}
+    for key, v in pairs(en) do out[key] = v end
+    out.keys = { row1, row2, row3, bottom }
+    return out
+end
+
+function M.apply(L)
+    local T = L.T
+    do
+        local name = "ui/data/keyboardlayouts/en_keyboard"
+        local ok, en = pcall(require, name)
+        if ok and type(en) == "table" and en.keys and #en.keys == 5 then
+            package.loaded[name] = leaf_english(en)
+        end
+    end
+    local VK = require("ui/widget/virtualkeyboard")
+    -- VirtualKey is local to virtualkeyboard.lua: reach it through VirtualKeyboard.addKeys' upvalues
+    local VirtualKey
+    do
+        local i = 1
+        while true do
+            local name, value = debug.getupvalue(VK.addKeys, i)
+            if not name then break end
+            if name == "VirtualKey" then VirtualKey = value end
+            i = i + 1
+        end
+    end
+    assert(VirtualKey, "VirtualKey not found")
+
+    local function kind(self)
+        local kb, label = self.keyboard, self.label
+        if label == ENTER then return "enter" end
+        local modifier = kb.shiftmode_keys[label] ~= nil or kb.shiftmode_keys[self.key] ~= nil
+            or kb.symbolmode_keys[label] ~= nil or kb.umlautmode_keys[label] ~= nil
+        if modifier then
+            local active = (kb.shiftmode and (kb.shiftmode_keys[label] ~= nil or kb.shiftmode_keys[self.key] ~= nil))
+                or (kb.umlautmode and kb.umlautmode_keys[label] ~= nil)
+            if label == CAPS then return "caps" end
+            return active and "on" or "fn"
+        end
+        if ICONS[label] then return "fn" end
+        return "char"
+    end
+
+    L.wrap(VirtualKey, "init", function(orig, self)
+        orig(self)
+        local k = kind(self)
+        local w, h = self.width, self.height
+        local fg = (k == "fn") and "text-2" or (k == "enter" and "accent-ink") or (k == "caps" and "bg") or "text"
+        local bg = ({ fn = "surface-3", enter = "accent", caps = "text" })[k] or "surface"
+
+        local label
+        local icon = ICONS[self.label]
+        if k == "enter" then
+            local submits = self.keyboard.inputbox and self.keyboard.inputbox.enter_callback
+            if submits then
+                label = TextWidget:new{ text = require("gettext")("Done"), face = L.face("ui-semibold", "fs-md"), fgcolor = T.color(fg) }
+            else
+                icon = "leaf.kb.enter"
+            end
+        end
+        local kb = self.keyboard
+        if not label and kb.symbolmode_keys[self.label] ~= nil then
+            -- the symbols key reads ?123 / ABC (.kb-t)
+            label = TextWidget:new{ text = kb.symbolmode and "ABC" or "?123", face = L.face("ui-semibold", "fs-sm"), fgcolor = T.color(fg) }
+        elseif not label and self.key == " " then
+            -- the space bar names the keyboard language (.kb-lang)
+            local lang = kb.getKeyboardLayout and kb:getKeyboardLayout() or "en"
+            local name = require("ui/language"):getLanguageName(lang) or lang
+            label = TextWidget:new{ text = name, face = L.face("ui", "fs-xs"), fgcolor = T.color("text-3") }
+        end
+        if not label and icon then
+            local s = T.px("icon-key")
+            label = IconWidget:new{ icon = icon, width = s, height = s, alpha = true }
+        elseif not label and self.icon then
+            label = self.label_widget -- a key that already draws its own icon
+        elseif not label then
+            local text = self.label
+            label = TextWidget:new{ text = text, face = L.face("ui", "fs-key"), fgcolor = T.color(fg),
+                max_width = w - 2 * T.px("sp-1") }
+        end
+        local content = CenterContainer:new{ dimen = Geom:new{ w = w, h = h }, label }
+        if false then -- .kb-key shows no long-press hints (holding a key still offers them)
+            content = OverlapGroup:new{ dimen = Geom:new{ w = w, h = h },
+                content,
+                RightContainer:new{ dimen = Geom:new{ w = w - T.px("sp-1h"), h = T.px("sp-5") },
+                    VerticalGroup:new{ VerticalSpan:new{ width = T.px("sp-half") },
+                        TextWidget:new{ text = self.alt_label, face = L.face("ui", "fs-2xs"), fgcolor = T.color("text-3") } } },
+            }
+        end
+        local frame = FrameContainer:new{
+            margin = 0, padding = 0, allow_mirroring = false,
+            radius = T.px("r-sm"),
+            bordersize = (k == "on") and T.px("bw-lg") or T.px("hairline"),
+            color = (k == "on") and T.color("text") or ((k == "enter" or k == "caps") and T.color(bg) or T.color("border-strong")),
+            background = T.color(bg),
+            content,
+        }
+        self[1] = frame
+    end, "VirtualKey:init")
+
+    L.wrap(VK, "addKeys", function(orig, self)
+        -- 48px keys: size the keyboard from the key height instead of KOReader's 64px rows
+        self.padding = T.px("sp-2")
+        self.key_padding = T.px("sp-1h")
+        local rows = #self.KEYS
+        self.height = rows * T.px("h-row") + (rows + 1) * self.key_padding + 2 * self.padding
+        orig(self)
+        local frame = self[1] and self[1][1]
+        if frame then
+            frame.background = T.color("bg-raised")
+            frame.color = T.color("border-strong")
+            frame.bordersize = T.px("hairline")
+        end
+    end, "VirtualKeyboard:addKeys")
+end
+
+return M

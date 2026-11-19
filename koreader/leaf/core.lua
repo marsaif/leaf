@@ -33,6 +33,7 @@ L.MODULES = {
     "sheets",
     "inputs",
     "scrim",
+    "keyboard",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

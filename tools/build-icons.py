@@ -79,6 +79,14 @@ MAP = {
     "check": "check",
     "plus": "plus",
     "leaf.minus": "minus",  # Leaf's own: slider-row step button (KOReader has no minus icon)
+    # Leaf's own: on-screen keyboard function keys (prototype keyboardHTML)
+    "leaf.kb.shift": "arrow-big-up",
+    "leaf.kb.caps": "arrow-big-up-dash",
+    "leaf.kb.backspace": "delete",
+    "leaf.kb.globe": "globe",
+    "leaf.kb.left": "arrow-left",
+    "leaf.kb.right": "arrow-right",
+    "leaf.kb.enter": "corner-down-left",
     "edit": "pencil",
     "exit": "log-out",
     "home": "house",

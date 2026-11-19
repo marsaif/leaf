@@ -74,6 +74,16 @@ local SCENES = {
         UIManager:show(d)
         d:onShowKeyboard()
     end },
+    { "input-sym", function()
+        local d = require("ui/widget/inputdialog"):new{ title = "Go to page", input_hint = "Page 1–112",
+            buttons = {{ { text = "Cancel", id = "close", callback = noop }, { text = "Go", is_enter_default = true, callback = noop } }} }
+        UIManager:show(d)
+        d:onShowKeyboard()
+        UIManager:scheduleIn(0.3, function()
+            local kb = d._input_widget and d._input_widget.keyboard
+            if kb then kb:setLayer("Sym") end
+        end)
+    end },
     { "buttondialog", function() show("ui/widget/buttondialog", {
         title = "Animal Farm",
         buttons = {
