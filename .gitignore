@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+# generated screenshots and reports (regenerate with prototype/tools)
+prototype/shots/
+prototype/tools/audit.json
+prototype/tools/audit-report.md
+prototype/tools/diff-report.md
+# local backups (git history replaces them)
+.backup*/
