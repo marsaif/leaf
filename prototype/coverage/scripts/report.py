@@ -99,19 +99,19 @@ rows = [
  ("MultiConfirmBox (`ui/widget/multiconfirmbox.lua`)", str(W["MultiConfirmBox"]), "fonts, typography language, OTA failure, page turns, random file, wallabag/news", "three-action dialog like `paste-conflict`", "designed (pattern)"),
  ("ButtonDialog + ButtonSelector (`ui/widget/buttondialog.lua`, `buttonselector.lua`)", f"{W['ButtonDialog']} + {W['ButtonSelector']}", "all long-press menus, quick menu, external link, search navigation, filters, selection popup, plus menu", "with `anchor` → `.ko-popover`; otherwise bottom action sheet (`book-actions` rows: icon + label, title as sheet head); ButtonSelector → radio rows", "designed (pattern)"),
  ("InputDialog + MultiInputDialog + OpenWithDialog + InputText (`ui/widget/inputdialog.lua`, `multiinputdialog.lua`, `inputtext.lua`)", f"{W['InputDialog']} + {W['MultiInputDialog']}", "all text entry, password, search, forms, fullscreen editors", "`input` (soft filled field, desc, check row, right-aligned actions) / form sheets / `text-editor` for fullscreen", "designed; replaces patch `2-dialogs.lua`"),
- ("VirtualKeyboard + VirtualKeyPopup + KeyboardLayoutDialog (`ui/widget/virtualkeyboard.lua`, `keyboardlayoutdialog.lua`)", "1 + 2 + 2", "every InputDialog", "`keyboard` overlay (48px keys, Done key)", "keyboard designed; key popup and layout switcher missing"),
- ("SpinWidget + DoubleSpinWidget + DateTimeWidget + NumberPickerWidget (`ui/widget/spinwidget.lua`, `doublespinwidget.lua`, `datetimewidget.lua`, `numberpickerwidget.lua`)", f"{W['SpinWidget']} + {W['DoubleSpinWidget']} + {W['DateTimeWidget']}", "every numeric setting, ConfigDialog fine-tune, timers, footer/dictionary/TOC/search settings", "compact dialog with `App.sliderRow` (one or two) / Hour-Minute steppers; Default · Cancel · Set", "**missing — design it first (100 sites)**"),
+ ("VirtualKeyboard + VirtualKeyPopup + KeyboardLayoutDialog (`ui/widget/virtualkeyboard.lua`, `keyboardlayoutdialog.lua`)", "1 + 2 + 2", "every InputDialog", "`keyboard` overlay (48px keys, Done key)", "designed (`keyboard`; Gaps › `key-popup`, `kb-layouts`)"),
+ ("SpinWidget + DoubleSpinWidget + DateTimeWidget + NumberPickerWidget (`ui/widget/spinwidget.lua`, `doublespinwidget.lua`, `datetimewidget.lua`, `numberpickerwidget.lua`)", f"{W['SpinWidget']} + {W['DoubleSpinWidget']} + {W['DateTimeWidget']}", "every numeric setting, ConfigDialog fine-tune, timers, footer/dictionary/TOC/search settings", "compact dialog with `App.sliderRow` (one or two) / Hour-Minute steppers; Default · Cancel · Set", "designed (Gaps › `spin`, `spin2`, `datetime`, `number`)"),
  ("TextViewer + ScrollTextWidget (`ui/widget/textviewer.lua`, `scrolltextwidget.lua`)", str(W["TextViewer"]), "descriptions, translation, view HTML, notes, CSS, notifications history, the paragraph-translate patch", "`view-html`/`translate` page-or-sheet with header actions (Find, font size) as popover", "designed (pattern)"),
  ("KeyValuePage (`ui/widget/keyvaluepage.lua`)", str(W["KeyValuePage"]), "book info, all statistics lists, battery/system stats, gesture intervals, RSS feeds, aliases, lookup histories", "`book-details` rows (label left in `--text-2`, value right), `.ko-pager`", "designed (pattern)"),
- ("Menu + MenuItem (`ui/widget/menu.lua`) → BookList → FileChooser → PathChooser; CloudStorage, OPDSBrowser, SyncService", f"{W['Menu']} + {W['BookList']} + {W['FileChooser']} + {W['PathChooser']}", "TOC, bookmarks, search results, collections, history, shortcuts, OPDS, cloud, dictionary download list, page map, defaults editor", "list page: `.ko-row` 48px, hairline separators, `.ko-pager` (tap → Go to page `input`), status/progress badges like the library list", "designed (pattern); PathChooser 'choose' footer missing"),
- ("SortWidget (`ui/widget/sortwidget.lua`)", str(W["SortWidget"]), "arrange collections/books/footer items/actions/dictionaries/vocab filter/cloud servers", "Arrange page (rows with handle + up/down, Save)", "partial (dict-manager order only)"),
+ ("Menu + MenuItem (`ui/widget/menu.lua`) → BookList → FileChooser → PathChooser; CloudStorage, OPDSBrowser, SyncService", f"{W['Menu']} + {W['BookList']} + {W['FileChooser']} + {W['PathChooser']}", "TOC, bookmarks, search results, collections, history, shortcuts, OPDS, cloud, dictionary download list, page map, defaults editor", "list page: `.ko-row` 48px, hairline separators, `.ko-pager` (tap → Go to page `input`), status/progress badges like the library list", "designed (pattern); PathChooser = Gaps › `path-chooser`"),
+ ("SortWidget (`ui/widget/sortwidget.lua`)", str(W["SortWidget"]), "arrange collections/books/footer items/actions/dictionaries/vocab filter/cloud servers", "Arrange page (rows with handle + up/down, Save)", "designed (Gaps › `arrange`; dict-manager order list)"),
  ("TouchMenu + TouchMenuBar + TouchMenuItem (`ui/widget/touchmenu.lua`)", "2", "the whole top menu in library and reader, plus every plugin menu", "`main-menu` (tabs as text with accent underline, rows with icons, breadcrumbs, footer)", "designed; existing patches `2-menu-panel.lua`, `2-clean-menus.lua` to be superseded"),
  ("ConfigDialog + ToggleSwitch + ButtonProgressWidget + OptionTextItem/OptionIconItem (`ui/widget/configdialog.lua`)", "1", "bottom typesetting panel (EPUB and PDF)", "`typeset` sheet (tabs, sliders, segments)", "designed"),
  ("CheckButton / CheckMark / RadioMark / RadioButtonTable", f"{W.get('CheckButton', 37)}+", "dialogs, menus, OpenWith, search options", "`App.check`, `App.toggle`, `App.radio`", "designed"),
  ("ProgressWidget (`ui/widget/progresswidget.lua`)", "14", "footer bar, book map, skim, Project: Title progress bars, ProgressbarDialog", "`App.progress` thin 2–3px line, accent fill", "designed"),
- ("ImageViewer (`ui/widget/imageviewer.lua`)", str(W["ImageViewer"]), "covers, images in books, screenshots, archives, OPDS streaming", "full-bleed image page", "**missing**"),
+ ("ImageViewer (`ui/widget/imageviewer.lua`)", str(W["ImageViewer"]), "covers, images in books, screenshots, archives, OPDS streaming", "full-bleed image page", "designed (Gaps › `image-viewer`)"),
  ("QRMessage, ProgressbarDialog, TrapWidget/Trapper, RadioButtonWidget", f"{W['QRMessage']} + {W['ProgressbarDialog']} + {W['TrapWidget']} + {W['RadioButtonWidget']}", "QR, downloads, tap-to-cancel long jobs, night-mode choice", "`qr`, progress states (OPDS/update), toast with Cancel, radio rows", "designed (patterns)"),
- ("VerticalScrollBar / LineWidget", "—", "scrollable text, separators everywhere", "thin bar; hairline `--line` separators", "scrollbar style missing (P3)"),
+ ("VerticalScrollBar / LineWidget", "—", "scrollable text, separators everywhere", "thin bar; hairline `--line` separators", "designed (Gaps › `text-viewer` scroll bar: 3px `--text-3` thumb)"),
 ]
 for i, r in enumerate(rows, 1):
     P(f"| {i} | {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]} |")
@@ -121,20 +121,20 @@ P("")
 P("They only partly inherit (buttons, title bars, fonts, icons) and need their own Lua work against the named Leaf design:")
 P("")
 selfdrawn = [
- ("ReaderFooter (`frontend/apps/reader/modules/readerfooter.lua`)", "`.rd-foot` + footer modes (gap rd.footer.modes)"),
- ("ReaderDogear, ReaderFlipping, ReaderView highlight/selection drawing, LinkBox, page gaps", "`.rd-dogear`, highlight styles; flipping indicator and link box are gaps"),
+ ("ReaderFooter (`frontend/apps/reader/modules/readerfooter.lua`)", "`.rd-foot` + footer modes (Gaps › `footer-mode`)"),
+ ("ReaderDogear, ReaderFlipping, ReaderView highlight/selection drawing, LinkBox, page gaps", "`.rd-dogear`, highlight styles; Gaps › `flipping`, `linkbox`, `scroll-mode` (page gap)"),
  ("DictQuickLookup (`ui/widget/dictquicklookup.lua`)", "`dict` / `wiki` sheets (+ empty states gap)"),
  ("FootnoteWidget (`ui/widget/footnotewidget.lua`)", "gap rd.footnote (P1)"),
- ("BBoxWidget (`ui/widget/bboxwidget.lua`) crop UI", "gap rd.crop"),
+ ("BBoxWidget (`ui/widget/bboxwidget.lua`) crop UI", "Gaps › `crop`"),
  ("SkimToWidget, BookMapWidget, PageBrowserWidget", "`skim`, `bookmap`, `pagebrowser`"),
  ("BookStatusWidget / AltBookStatusWidget (Project: Title)", "`book-status`"),
  ("FrontLightWidget / NaturalLightWidget", "`frontlight`"),
- ("ScreenSaverWidget / ScreenSaverLockWidget", "`sleep`, `lockscreen` (lock prompt is a gap)"),
+ ("ScreenSaverWidget / ScreenSaverLockWidget", "`sleep`, `lockscreen`; lock prompt = Gaps › `unlock`"),
  ("NetworkSetting (`ui/widget/networksetting.lua`)", "`wifi`"),
- ("CalendarView / CalendarDayView / ReaderProgress (statistics)", "`stats` (month calendar and day timeline are gaps)"),
+ ("CalendarView / CalendarDayView / ReaderProgress (statistics)", "`stats`; Gaps › `stats-cal`, `stats-day`, `book-stats`"),
  ("VocabularyBuilderWidget / WordInfoDialog / MenuDialog", "`vocab`, `ex-vb-word`, `ex-vb-settings`"),
  ("Project: Title MosaicMenu / ListMenu / titlebar / footer, FileManager layout", "`library`, `folder`, `history`, `collection`"),
- ("TweakInfoWidget, Screenshoter, Terminal (TermInputText), IndicatorOverlay", "gaps / `terminal`"),
+ ("TweakInfoWidget, Screenshoter, Terminal (TermInputText), IndicatorOverlay", "Gaps › `tweak-info`, `screenshot`; `terminal`"),
 ]
 for a, b in selfdrawn:
     P(f"- {a} → {b}")
