@@ -24,6 +24,7 @@ local L = {
 -- order matters: fonts and sizes must be set before any widget class reads them
 L.MODULES = {
     "fonts",
+    "frames",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
