@@ -144,6 +144,29 @@ MAP = {
     "wifi.open.50": "wifi-high",
     "wifi.open.75": "wifi-high",
     "wifi.open.100": "wifi",
+    # library area: bottom nav (".on" = --stroke-strong, the active tab), view switch, home, cells
+    "leaf.nav.home": "house",
+    "leaf.nav.home.on": (["house"], {"stroke": "strong"}),
+    "leaf.nav.library": "library-big",
+    "leaf.nav.library.on": (["library-big"], {"stroke": "strong"}),
+    "leaf.nav.history": "history",
+    "leaf.nav.history.on": (["history"], {"stroke": "strong"}),
+    "leaf.nav.settings": "settings",
+    "leaf.nav.settings.on": (["settings"], {"stroke": "strong"}),
+    "leaf.view.grid": "layout-grid",
+    "leaf.view.grid.on": (["layout-grid"], {"stroke": "strong"}),
+    "leaf.view.detail": "rows-3",
+    "leaf.view.detail.on": (["rows-3"], {"stroke": "strong"}),
+    "leaf.view.list": "list",
+    "leaf.view.list.on": (["list"], {"stroke": "strong"}),
+    "leaf.lib.sun": "sun-medium",
+    "leaf.lib.clock": "clock",
+    "leaf.lib.bookmark": "bookmark",
+    "leaf.lib.bookopen": "book-open",
+    "leaf.lib.flame": "flame",
+    "leaf.lib.filetext": "file-text",
+    "leaf.lib.gauge": "gauge",
+    "leaf.lib.folder": "folder",
 }
 
 KEEP_STOCK = {
@@ -167,8 +190,9 @@ KEEP_STOCK = {
 }
 
 
-def stroke_width():
-    m = re.search(r"--stroke:\s*([\d.]+);", TOKENS.read_text())
+def stroke_width(variant=None):
+    name = "stroke" if not variant else f"stroke-{variant}"
+    m = re.search(rf"--{name}:\s*([\d.]+);", TOKENS.read_text())
     return m.group(1)
 
 
@@ -240,7 +264,8 @@ def main():
         if not hit:
             report["missing_lucide"].append(f"{stock} -> {names}")
             continue
-        out[f"{stock}.svg"] = render(lucide[hit], hit, sw, opts.get("fill", "none"))
+        w = stroke_width(opts["stroke"]) if "stroke" in opts else sw
+        out[f"{stock}.svg"] = render(lucide[hit], hit, w, opts.get("fill", "none"))
         report["mapped"].append(f"{stock} -> {hit}")
 
     out.update(controls())
