@@ -43,7 +43,7 @@ function M.apply(L)
     local border = T.color("border")
     L.wrap(LineWidget, "paintTo", function(orig, self, bb, x, y)
         local d = self.dimen
-        if d and (d.h <= hair or d.w <= hair) and self.background ~= Blitbuffer.COLOR_WHITE then
+        if d and (d.h <= hair or d.w <= hair) and self.background and self.background ~= Blitbuffer.COLOR_WHITE then
             local bg = self.background
             self.background = border
             orig(self, bb, x, y)

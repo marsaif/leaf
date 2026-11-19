@@ -25,6 +25,7 @@ local L = {
 L.MODULES = {
     "fonts",
     "frames",
+    "buttons",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
