@@ -51,6 +51,7 @@ function M.apply(L)
     local function wants_scrim(w)
         if type(w) ~= "table" or w._leaf_scrim ~= nil then return false end
         if w.fullscreen or w._leaf_toast or w.anchor or w.invisible then return false end
+        if w._leaf_wants_scrim then return true end -- Leaf's own sheets (Wi-Fi, quick settings...)
         for _, class in pairs(classes) do
             if is_a(w, class) then return true end
         end

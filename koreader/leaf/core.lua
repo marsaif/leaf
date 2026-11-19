@@ -44,6 +44,11 @@ L.MODULES = {
     "typeset",
     "booksheet",
     "bookdetails",
+    -- system and tools
+    "stats",
+    "search",
+    "wifi",
+    "system",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

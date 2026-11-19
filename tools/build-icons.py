@@ -144,6 +144,43 @@ MAP = {
     "wifi.open.50": "wifi-high",
     "wifi.open.75": "wifi-high",
     "wifi.open.100": "wifi",
+    # -- system and tools (search, wifi, sleep, about, quick settings, stats)
+    **{f"wifi.secure.{p}": n for p, n in ((0, "wifi-zero"), (25, "wifi-low"), (50, "wifi-high"), (75, "wifi-high"), (100, "wifi"))},
+    "leaf.sys.search": "search",
+    "leaf.sys.recent": "history",
+    "leaf.sys.clear": "circle-x",
+    "leaf.sys.lock": "lock",
+    "leaf.sys.refresh": "refresh-cw",
+    "leaf.sys.wifi": "wifi",
+    "leaf.sys.wifi.off": "wifi-off",
+    "leaf.sys.sun": "sun",
+    "leaf.sys.moon": "moon",
+    "leaf.sys.rotate": "rotate-cw",
+    "leaf.sys.plane": "plane",
+    "leaf.sys.camera": "camera",
+    "leaf.sys.sleep": "moon-star",
+    "leaf.sys.flame": "flame",
+    "leaf.sys.clock": "clock",
+    "leaf.sys.book": "book-open",
+    "leaf.sys.calendar": "calendar",
+    "leaf.sys.keyboard": "keyboard",
+    "leaf.sys.folder": "folder",
+    "leaf.sys.case": "case-sensitive",
+    "leaf.sys.words": "whole-word",
+    "leaf.sys.regex": "regex",
+    "leaf.sys.text": "text-search",
+    "leaf.sys.quote": "quote",
+    "leaf.sys.image": "image",
+    "leaf.sys.chart": "chart-column",
+    "leaf.sys.layers": "layers",
+    "leaf.sys.files": "files",
+    "leaf.sys.eye": "eye",
+    "leaf.sys.arrow": "arrow-right",
+    "leaf.sys.plus": "plus",
+    "leaf.sys.settings": "settings",
+    "leaf.sys.trend.up": "trending-up",
+    "leaf.sys.check": "check",
+    # -- end system and tools
 }
 
 KEEP_STOCK = {
@@ -158,8 +195,6 @@ KEEP_STOCK = {
     **{n: "page chrome" for n in (
         "dogear.abandoned dogear.abandoned.rtl dogear.alpha dogear.complete dogear.complete.rtl "
         "dogear.opaque dogear.reading position.marker position.marker.top").split()},
-    # secured networks: Lucide has no wifi+lock at every strength; keep until the wifi screen port
-    **{f"wifi.secure.{p}": "wifi + lock" for p in (0, 25, 50, 75, 100)},
     # small status glyphs and placeholders
     "cre.render.partial": "status glyph", "cre.render.ready": "status glyph",
     "cre.render.reload": "status glyph", "cre.render.reload.alpha": "status glyph",

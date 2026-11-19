@@ -39,6 +39,19 @@ end
 local function show(mod, args) UIManager:show(require(mod):new(args)) end
 local noop = function() end
 
+-- desktop has no Wi-Fi hardware: a fake scan result (system and tools scenes)
+function LEAF_FAKE_NETWORKS()
+    return {
+        { ssid = "Home-5G", signal_quality = 92, flags = "[WPA2-PSK-CCMP][ESS]", password = "x", connected = true },
+        { ssid = "Home-2.4G", signal_quality = 74, flags = "[WPA2-PSK-CCMP][ESS]", password = "x" },
+        { ssid = "Café Lumière", signal_quality = 70, flags = "[WPA2-PSK-CCMP][ESS]" },
+        { ssid = "Bibliothèque publique", signal_quality = 48, flags = "[ESS]" },
+        { ssid = "Vodafone-7F21", signal_quality = 41, flags = "[WPA2-PSK-CCMP][SAE][ESS]" },
+        { ssid = "DIRECT-HP OfficeJet", signal_quality = 22, flags = "[WPA2-PSK-CCMP][ESS]" },
+        { ssid = "eduroam", signal_quality = 18, flags = "[WPA2-EAP-CCMP][ESS]" },
+    }
+end
+
 local SCENES = {
     { "fm", noop },
     { "menu", function() FM().menu:onShowMenu() end },
@@ -161,6 +174,79 @@ local SCENES = {
         local ok, catalog = pcall(require, "leaf/catalog")
         if ok then catalog.show() else logger.info("autoshot: no leaf/catalog yet") end
     end },
+    -- system and tools scenes
+    { "stats", function()
+        local now = os.time()
+        local dates = {}
+        for i, m in ipairs({ 35, 62, 0, 9, 22, 18, 51 }) do -- today first, as the plugin returns them
+            if m > 0 then table.insert(dates, { m * 2, m * 60, os.date("%Y-%m-%d", now - 86400 * (i - 1)) }) end
+        end
+        show("readerprogress", { dates = dates, current_duration = 1260, current_pages = 14,
+            today_duration = 2100, today_pages = 27 })
+    end },
+    { "calendar", function()
+        local month = os.date("%Y-%m")
+        local today = tonumber(os.date("%d"))
+        local ratios, books = {}, {}
+        local mins = { 12, 0, 45, 30, 70, 5, 0, 22, 90, 40, 0, 15, 33, 61, 8, 0, 27, 44, 52, 0, 18, 75, 36, 9, 0, 41, 28, 63 }
+        for d = 1, today do
+            local m = mins[(d - 1) % #mins + 1]
+            if m > 0 then
+                local r = {}
+                for h = 1, 24 do r[h] = 0 end
+                r[21] = math.min(1, m / 60) ; r[22] = math.max(0, (m - 60) / 60)
+                local key = string.format("%s-%02d", month, d)
+                ratios[key] = r
+                books[key] = { { id = d % 3 + 1, title = ({ "Animal Farm", "Dracula", "Walden" })[d % 3 + 1] } }
+            end
+        end
+        local fake = {
+            settings = {}, color = false,
+            getFirstTimestamp = function() return os.time() - 86400 * 90 end,
+            getReadingRatioPerHourByDay = function() return ratios end,
+            getReadBookByDay = function() return books end,
+        }
+        show("calendarview", { reader_statistics = fake, start_day_of_week = 2, nb_book_spans = 2,
+            show_hourly_histogram = true, browse_future_months = false })
+    end },
+    { "search", function()
+        G_reader_settings:saveSetting("leaf_search_history", { "Orwell", "Brave", "gothic", "stoic", "Holmes" })
+        FM().filesearcher:onShowFileSearch("")
+    end },
+    { "search-results", function()
+        local FS = require("apps/filemanager/filemanagerfilesearcher")
+        FS.search_string = "animal"
+        FS.search_path = G_reader_settings:readSetting("home_dir")
+        require("ui/trapper"):wrap(function() FM().filesearcher:doSearch() end)
+    end, wait = 3 },
+    { "search-last", function() FM().filesearcher:onShowFileSearch("animal") end },
+    { "wifi", function() show("ui/widget/networksetting", { network_list = LEAF_FAKE_NETWORKS() }) end },
+    { "wifi-password", function()
+        local w = require("ui/widget/networksetting"):new{ network_list = LEAF_FAKE_NETWORKS() }
+        UIManager:show(w)
+        for _i, it in ipairs(w._leaf_items or {}) do
+            if it.info.ssid == "Café Lumière" then it:onAddNetwork() end
+        end
+    end },
+    { "sleep", function()
+        G_reader_settings:saveSetting("screensaver_type", "cover")
+        G_reader_settings:saveSetting("lastfile", G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+        -- through the "Choose sleep screen" entry Leaf adds to KOReader's Sleep screen menu
+        local ss = FM().menu.menu_items and FM().menu.menu_items.screensaver
+        if ss and ss.sub_item_table[1].callback then ss.sub_item_table[1].callback() else require("leaf/system").show_sleep() end
+    end },
+    { "sleep-preview", function()
+        local p = require("leaf/system").SleepPage:new{}
+        UIManager:show(p)
+        p:preview()
+    end },
+    { "about", function()
+        -- through KOReader's menu entry (Help › About), which Leaf points at its About card
+        local items = FM().menu.menu_items
+        if items and items.about then items.about.callback() else require("leaf/system").show_about() end
+    end },
+    { "quick", function() require("leaf/system").show_quick() end },
+    -- end system and tools scenes
     -- reader scenes replace the file manager: keep them last
     { "reader", function()
         local book = G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub"
@@ -183,6 +269,18 @@ local SCENES = {
         if ok and chrome.show then chrome.show(RUI()) end
     end },
     { "bookmarks", function() RUI().bookmark:onShowBookmark() end },
+    -- system and tools reader scenes
+    { "search-book", function()
+        G_reader_settings:saveSetting("leaf_fulltext_history", { "silence", "windmill", "Napoleon" })
+        RUI().search:onShowFulltextSearchInput("silence")
+    end },
+    { "search-book-results", function()
+        local s = RUI().search
+        s.last_search_text = "the"
+        s.case_insensitive = true
+        require("ui/trapper"):wrap(function() s:findAllText("the") end)
+    end, wait = 3 },
+    -- end system and tools reader scenes
 }
 
 local wanted = os.getenv("KO_AUTOSHOT_SCENES")
