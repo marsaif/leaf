@@ -62,6 +62,9 @@ function M.apply(L)
         danger = { bg = "danger", fg = "danger-ink", bold = true },
         secondary = { bg = "surface-2", fg = "text" },
         ghost = { fg = "text-2" },
+        -- list rows built from buttons (sheets): regular weight, --text / --danger label
+        row = { fg = "text", face = "ui" },
+        ["row-danger"] = { fg = "danger", face = "ui" },
     }
 
     local function color_label(self)
@@ -84,7 +87,7 @@ function M.apply(L)
         if k then
             self.background = k.bg and T.color(k.bg) or nil
             self.radius = T.px("r-md")
-            self.text_font_face = medium
+            self.text_font_face = k.face and fonts.FILES[k.face] or medium
             self.text_font_size = T.fs("fs-md")
             self.text_font_bold = k.bold or false
         end
