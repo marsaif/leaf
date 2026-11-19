@@ -3,7 +3,8 @@
     an accent fill up to the value and a 20px knob (--surface with a --bw-lg accent ring).
     Tap anywhere on it, or drag, to set the value.
 
-    LeafSlider:new{ width = px, pct = 0..1, on_change = function(frac, final) end, enabled = true }
+    LeafSlider:new{ width = px, pct = 0..1, on_change = function(frac, final) end, enabled = true [, ticks = {fractions}] }
+    ticks: chapter marks across the track (.rd-scrub-ticks: 1px x 10px, --border-strong)
     slider:setPct(frac) moves the knob without calling on_change.
 --]]
 local Geom = require("ui/geometry")
@@ -50,6 +51,12 @@ function LeafSlider:paintTo(bb, x, y)
     local th = T.px("sp-1")
     local cy = y + math.floor(self.dimen.h / 2)
     local r = T.px("r-cover")
+    if self.ticks then
+        local tk = T.px("sp-2h")
+        for _i, f in ipairs(self.ticks) do
+            bb:paintRect(x0 + math.floor(tw * f + 0.5), cy - math.floor(tk / 2), T.px("hairline"), tk, T.color("border-strong"))
+        end
+    end
     bb:paintRoundedRect(x0, cy - math.floor(th / 2), tw, th, T.color("surface-3"), math.min(r, math.floor(th / 2)))
     local kx = x0 + math.floor(tw * math.max(0, math.min(1, self.pct)) + 0.5)
     if self.enabled and kx > x0 then

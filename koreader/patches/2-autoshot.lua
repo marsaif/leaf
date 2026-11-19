@@ -36,6 +36,54 @@ if path:match("%.png$") then
     return
 end
 
+local function home(f) return G_reader_settings:readSetting("home_dir") .. "/" .. f end
+EPUB_BOOK = "Animal Farm (EN-AR).epub" -- every EPUB reader scene (the prototype's animal-farm)
+PDF_BOOK = "KOReader UI Redesign Concept.pdf"
+-- open a book in the reader unless it is already the open one; true when it had to open it
+local function open_book(name)
+    local file, ui = home(name), RUI()
+    if ui and ui.document and ui.document.file == file then return false end
+    if ui then ui:switchDocument(file, true) else require("apps/reader/readerui"):showReader(file) end
+    return true
+end
+local function book_open(kind)
+    local ui = RUI()
+    return ui and ui.document and ui.document.file == home(kind == "pdf" and PDF_BOOK or EPUB_BOOK)
+end
+
+-- reader scenes: Chapter I of the open EPUB (+ n pages), like the prototype's reading page
+local function chapter_one(n)
+    local ui = RUI()
+    if not (ui and ui.rolling) then return end
+    for _i, t in ipairs(ui.toc.toc or {}) do
+        if t.title:find("Chapter I", 1, true) then
+            ui.rolling:onGotoXPointer(t.xpointer)
+            if n and n > 0 then ui:handleEvent(require("ui/event"):new("GotoPage", ui.document:getCurrentPage() + n)) end
+            return
+        end
+    end
+end
+-- a few bookmarks (one with a note) so the bookmark list, skim and book map have something to show
+local function seed_bookmarks()
+    local ui = RUI()
+    if not (ui and ui.rolling) or ui._leaf_seeded then return end
+    ui._leaf_seeded = true
+    local start
+    for _i, t in ipairs(ui.toc.toc or {}) do
+        if t.title:find("Chapter I", 1, true) then start = t.page break end
+    end
+    start = start or 10
+    for i, off in ipairs({ 1, 30, 60 }) do
+        local pg = start + off
+        if not ui.bookmark:isPageBookmarked(ui.document:getPageXPointer(pg)) then ui.bookmark:toggleBookmark(pg) end
+        if i == 2 then
+            local idx = ui.bookmark:getDogearBookmarkIndex(ui.document:getPageXPointer(pg))
+            local item = idx and ui.annotation.annotations[idx]
+            if item then item.note = "Start of the vote" end
+        end
+    end
+end
+
 local function show(mod, args) UIManager:show(require(mod):new(args)) end
 -- typeset scenes: open the reader's typesetting sheet on a Leaf tab (leaf_key), then run `after`
 local function ts_open(key, after)
@@ -43,7 +91,7 @@ local function ts_open(key, after)
     if not ui then return end
     if not ui._leaf_ts_paged and not ui.document.koptinterface then
         ui._leaf_ts_paged = true
-        ui:handleEvent(require("ui/event"):new("GotoPage", 12)) -- a text page behind the sheet
+        chapter_one(3) -- a text page behind the sheet
     end
     ui.config:onShowConfigMenu()
     local d = ui.config.config_dialog
@@ -353,10 +401,11 @@ local SCENES = {
     -- end polish-ui scenes
     -- end system and tools scenes
     -- reader scenes replace the file manager: keep them last
+    -- every EPUB reader scene runs on the bilingual Animal Farm (book = "epub": opened first if needed)
     { "reader", function()
-        local book = G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub"
-        require("apps/reader/readerui"):showReader(book)
-    end, keep = true, wait = 4 },
+        open_book(EPUB_BOOK)
+        UIManager:scheduleIn(2.5, function() chapter_one(3) seed_bookmarks() end)
+    end, keep = true, wait = 5, book = "epub" },
     { "readermenu", function() RUI().menu:onShowMenu() end },
     { "readerconfig", function() RUI().config:onShowConfigMenu() end },
     { "readerconfig-text", function()
@@ -373,12 +422,11 @@ local SCENES = {
         local ok, chrome = pcall(require, "leaf/reader_chrome")
         if ok and chrome.show then chrome.show(RUI()) end
     end },
-    { "bookmarks", function() RUI().bookmark:onShowBookmark() end },
+    { "bookmarks", function() seed_bookmarks() RUI().bookmark:onShowBookmark() end },
     -- kvpages scenes (reader): the paragraph-translate patch panel, on the EN-AR edition (opens it: keep last)
     { "translate", function()
-        local book = G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub"
-        require("apps/reader/readerui"):showReader(book)
-        UIManager:scheduleIn(4, function()
+        local opened = open_book(EPUB_BOOK)
+        UIManager:scheduleIn(opened and 4 or 0.5, function()
             local ui = RUI()
             ui:handleEvent(require("ui/event"):new("GotoPage", 12))
             local RH = require("apps/reader/modules/readerhighlight")
@@ -405,19 +453,13 @@ local SCENES = {
 
     -- lookup scenes (leaf/lookup.lua): the bilingual Animal Farm, Chapter I, a selection mid-page
     { "lk-open", function()
-        local book = G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub"
         local function chapter_one()
             local ui = RUI()
             for _, t in ipairs(ui.toc.toc or {}) do
                 if t.title:find("Chapter I", 1, true) then ui.rolling:onGotoXPointer(t.xpointer) break end
             end
         end
-        if RUI() then
-            RUI():switchDocument(book, true)
-        else
-            require("apps/reader/readerui"):showReader(book)
-        end
-        UIManager:scheduleIn(3, chapter_one)
+        UIManager:scheduleIn(open_book(EPUB_BOOK) and 3 or 0.2, chapter_one)
     end, keep = true, wait = 5 },
     { "lk-hl-popup", function() LK.select(0.30, 0.34) RUI().highlight:onShowHighlightMenu() end },
     { "lk-hl-popup-low", function() LK.select(0.80, 0.82) RUI().highlight:onShowHighlightMenu() end },
@@ -503,48 +545,11 @@ local SCENES = {
         require("ui/trapper"):wrap(function() s:findAllText("silence") end)
     end, wait = 3 },
     -- end system and tools reader scenes
-    -- typeset scenes (EPUB: every tab; then the PDF panel, which replaces the reader: keep it last)
-    { "ts-presets", function() ts_open("presets") end },
-    { "ts-text", function() ts_open("text") end },
-    { "ts-text-help", function() ts_open("text", function(d) d._leaf_help = "word_spacing"; d:update() end) end },
-    { "ts-font", function() ts_open("font") end },
-    { "ts-margins", function() ts_open("margins") end },
-    { "ts-page", function() ts_open("page") end },
-    { "ts-layout", function() ts_open("layout") end },
-    { "ts-contrast", function() ts_open("contrast") end },
-    { "ts-style", function() ts_open("style") end },
-    { "ts-style-scrolled", function() ts_open("style", function(d)
-        local sc = d._leaf_scroll
-        if sc then sc:initState(); if sc._is_scrollable then sc:_scrollBy(0, sc._max_scroll_offset_y) end end
-    end) end },
-    { "ts-slider-change", function() ts_open("text", function(d)
-        -- moves the line spacing slider in code (as a tap at 80% would): exercises the choose/update path
-        local o = d:findOptionByName("line_spacing")
-        if not o then return end
-        local before = d.configurable.line_spacing
-        d:onConfigChoose(o.values, o.name, o.event, o.args, math.floor(#o.values * 0.8), o.hide_on_apply)
-        -- put the book back once the shot is taken (doc settings persist across runs)
-        local ui = RUI()
-        UIManager:scheduleIn(2, function()
-            ui.document.configurable.line_spacing = before
-            ui:handleEvent(require("ui/event"):new("SetLineSpace", before))
-        end)
-    end) end },
-    { "reader-pdf", function()
-        local book = G_reader_settings:readSetting("home_dir") .. "/KOReader UI Redesign Concept.pdf"
-        require("apps/reader/readerui"):showReader(book)
-    end, keep = true, wait = 4 },
-    { "ts-pdf-rotate", function() ts_open("rotate") end },
-    { "ts-pdf-crop", function() ts_open("crop") end },
-    { "ts-pdf-zoom", function() ts_open("zoom") end },
-    { "ts-pdf-page", function() ts_open("page") end },
-    { "ts-pdf-reflow", function() ts_open("reflow") end },
-    { "ts-pdf-contrast", function() ts_open("contrast") end },
-    { "ts-pdf-doc", function() ts_open("doc") end },
     -- reader extras scenes (frontlight, go to, skim, book map, page browser, book end, page header)
     { "reader-page", function()
-        -- a text page with a chapter title, so the page header has something to show
-        RUI():handleEvent(require("ui/event"):new("GotoPage", 12))
+        -- a text page inside Chapter I, so the page header has a chapter to show
+        chapter_one(3)
+        seed_bookmarks()
     end, keep = true, wait = 2 },
     { "frontlight", function()
         -- desktop has no frontlight: pretend the device has one with warmth while the sheet is up
@@ -573,16 +578,56 @@ local SCENES = {
         local w = UIManager._window_stack[#UIManager._window_stack].widget
         if w.leaf_key then for _, k in ipairs({ "4", "0" }) do w:leaf_key(k) end end
     end },
-    { "skim", function() RUI().gotopage:onShowSkimtoDialog() end },
+    { "skim", function() seed_bookmarks() RUI().gotopage:onShowSkimtoDialog() end },
     { "skim-moved", function()
         RUI().gotopage:onShowSkimtoDialog()
         local w = UIManager._window_stack[#UIManager._window_stack].widget
         if w.goToPage then w:goToPage(w.curr_page + 10) end
     end },
-    { "bookmap", function() RUI().thumbnail:onShowBookMap() end, wait = 3 },
+    { "bookmap", function() seed_bookmarks() RUI().thumbnail:onShowBookMap() end, wait = 3 },
     { "bookmap-overview", function() RUI().thumbnail:onShowBookMap(true) end, wait = 3 },
-    { "pagebrowser", function() RUI().thumbnail:onShowPageBrowser() end, wait = 5 },
+    { "pagebrowser", function() seed_bookmarks() RUI().thumbnail:onShowPageBrowser() end, wait = 5 },
     { "bookend", function() RUI().status:onEndOfBook() end, wait = 2 },
+    -- typeset scenes (EPUB: every tab; then the PDF panel, which replaces the reader: keep it last)
+    { "ts-presets", function() ts_open("presets") end },
+    { "ts-text", function() ts_open("text") end },
+    { "ts-text-help", function() ts_open("text", function(d) d._leaf_help = "word_spacing"; d:update() end) end },
+    { "ts-font", function() ts_open("font") end },
+    { "ts-margins", function() ts_open("margins") end },
+    { "ts-page", function() ts_open("page") end },
+    { "ts-layout", function() ts_open("layout") end },
+    { "ts-contrast", function() ts_open("contrast") end },
+    { "ts-style", function() ts_open("style") end },
+    { "ts-style-scrolled", function() ts_open("style", function(d)
+        local sc = d._leaf_scroll
+        if sc then sc:initState(); if sc._is_scrollable then sc:_scrollBy(0, sc._max_scroll_offset_y) end end
+    end) end },
+    { "ts-slider-change", function() ts_open("text", function(d)
+        -- moves the line spacing slider in code (as a tap at 80% would): exercises the choose/update path
+        local o = d:findOptionByName("line_spacing")
+        if not o then return end
+        local before = d.configurable.line_spacing
+        d:onConfigChoose(o.values, o.name, o.event, o.args, math.floor(#o.values * 0.8), o.hide_on_apply)
+        -- put the book back once the shot is taken (doc settings persist across runs)
+        local ui = RUI()
+        UIManager:scheduleIn(2, function()
+            ui.document.configurable.line_spacing = before
+            ui:handleEvent(require("ui/event"):new("SetLineSpace", before))
+        end)
+    end) end },
+    -- PDF scenes: replace the EPUB with the PDF, so they run last (reader + typeset tabs)
+    { "reader-pdf", function() open_book(PDF_BOOK) end, keep = true, wait = 4, book = "pdf" },
+    { "chrome-pdf", function()
+        local ok, chrome = pcall(require, "leaf/reader_chrome")
+        if ok and chrome.show then chrome.show(RUI()) end
+    end, book = "pdf" },
+    { "ts-pdf-rotate", function() ts_open("rotate") end },
+    { "ts-pdf-crop", function() ts_open("crop") end },
+    { "ts-pdf-zoom", function() ts_open("zoom") end },
+    { "ts-pdf-page", function() ts_open("page") end },
+    { "ts-pdf-reflow", function() ts_open("reflow") end },
+    { "ts-pdf-contrast", function() ts_open("contrast") end },
+    { "ts-pdf-doc", function() ts_open("doc") end },
 }
 
 -- lookup scenes: helpers
@@ -726,6 +771,12 @@ function LIB.seed()
             local fm = FM()
             if fm then fm:onRefresh() end
         end)
+-- reader scenes need their book: every scene from "reader" on is an EPUB scene, from "reader-pdf" on a PDF one
+do
+    local kind
+    for _i, sc in ipairs(SCENES) do
+        if sc[1] == "reader" then kind = "epub" elseif sc[1] == "reader-pdf" then kind = "pdf" end
+        sc.book = sc.book or kind
     end
 end
 
@@ -755,6 +806,14 @@ local function run(i)
     local scene = list[i]
     if not scene then
         UIManager:scheduleIn(0.5, function() UIManager:quit() end)
+        return
+    end
+    -- a reader scene run on its own (or after the other book): open its book first
+    if scene.book and not scene._opened and not book_open(scene.book) then
+        scene._opened = true
+        open_book(scene.book == "pdf" and PDF_BOOK or EPUB_BOOK)
+        if scene.book == "epub" then UIManager:scheduleIn(2.5, function() chapter_one(3) seed_bookmarks() end) end
+        UIManager:scheduleIn(4, function() run(i) end)
         return
     end
     local depth = #UIManager._window_stack

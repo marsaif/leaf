@@ -8,6 +8,9 @@
       Kit.line(w, token)              a hairline
       Kit.icon_button(icon, cb, parent [, size_token])
       Kit.button{ label, kind, callback, parent [, width] }       a .ko-btn (40px, _leaf_kind)
+      Kit.status_strip(width)        the prototype's status bar (wifi · clock · battery %), right-aligned
+      Kit.TintIcon:new{ icon, size_token, color }                 an icon in a token colour
+      Kit.icon_label_button{ icon, label, kind, callback }        a .ko-btn with a leading icon
       Kit.head{ width, title, sub, actions = {widgets}, on_close, parent }
                                       .ko-sheet-head: title + sub on the left, actions + × on the right
       Kit.row{ width, icon, label, sub, trailing = "toggle"|"chevron"|nil, on, enabled, callback [, pad] }
@@ -131,6 +134,58 @@ function Kit.button(o)
         width = o.width, enabled = o.enabled ~= false,
         height = T.px("h-control") - 2 * Size.padding.button, callback = o.callback, hold_callback = o.hold_callback,
         show_parent = o.parent }
+end
+
+-- an icon painted in a token colour (icons are black SVGs: their strokes become a mask), e.g. a
+-- --text-3 trash can, or a white icon on a primary button. Kit.TintIcon:new{ icon, size_token, color }
+Kit.TintIcon = Widget:extend{ size_token = "icon-md" }
+function Kit.TintIcon:init()
+    local s = L_().T.px(self.size_token)
+    self.dimen = geom(s, s)
+    self._icon = IconWidget:new{ icon = self.icon, width = s, height = s, alpha = true }
+end
+function Kit.TintIcon:getSize() return self.dimen end
+function Kit.TintIcon:paintTo(bb, x, y)
+    local Blitbuffer = require("ffi/blitbuffer")
+    local w, h = self.dimen.w, self.dimen.h
+    self.dimen.x, self.dimen.y = x, y
+    if not self._mask then
+        local m = Blitbuffer.new(w, h, Blitbuffer.TYPE_BB8)
+        m:fill(Blitbuffer.COLOR_WHITE)
+        self._icon:paintTo(m, 0, 0)
+        m:invertRect(0, 0, w, h)
+        self._mask = m
+    end
+    bb:colorblitFrom(self._mask, x, y, 0, 0, w, h, self.color or L_().T.color("text"))
+end
+function Kit.TintIcon:free()
+    if self._mask then self._mask:free() self._mask = nil end
+    if self._icon then self._icon:free() end
+end
+
+-- a .ko-btn with a leading icon (UI.button({icon, label, kind})): Kit.icon_label_button{ icon, label,
+-- kind = "primary"|"secondary"|"ghost", callback, enabled }
+function Kit.icon_label_button(o)
+    local L = L_()
+    local T = L.T
+    local kinds = {
+        primary = { bg = "accent", fg = "accent-ink", face = "ui-semibold" },
+        secondary = { bg = "surface-2", fg = "text", face = "ui-medium" },
+        ghost = { fg = "text-2", face = "ui-medium" },
+    }
+    local k = kinds[o.kind or "secondary"] or kinds.secondary
+    local enabled = o.enabled ~= false
+    local label = TextWidget:new{ text = o.label, face = L.face(k.face, "fs-md"), fgcolor = T.color(enabled and k.fg or "disabled") }
+    local g = HorizontalGroup:new{ align = "center",
+        Kit.TintIcon:new{ icon = o.icon, size_token = "icon-sm", color = T.color(enabled and k.fg or "disabled") },
+        HorizontalSpan:new{ width = T.px("sp-2") }, label }
+    local pad = o.kind == "ghost" and T.px("sp-3") or T.px("sp-4")
+    local w = g:getSize().w + 2 * pad
+    g:resetLayout()
+    local h = T.px("h-control")
+    local bg = k.bg and T.color(enabled and k.bg or "surface-2") or nil
+    return Kit.Tap:new{ width = w, height = h, radius = T.px("r-md"), bg = bg, enabled = enabled,
+        content = CenterContainer:new{ dimen = geom(w, h), g }, callback = o.callback }
 end
 
 ---------------------------------------------------------------- sheet head
@@ -304,6 +359,43 @@ end
 function Kit.inner(width)
     local T = L_().T
     return (width or Screen:getWidth()) - 2 * T.px("hairline")
+end
+
+---------------------------------------------------------------- status strip
+-- App.statusBar(): wifi · time · battery (pt_i_battery) · % on the right, --h-status high, --text-2 --fs-xs.
+-- Kit.status_strip(width [, right_pad])
+function Kit.status_strip(width, right_pad)
+    local L = L_()
+    local T = L.T
+    local h = T.px("h-status")
+    local col = T.color("text-2")
+    local g = HorizontalGroup:new{ align = "center" }
+    local s = T.px("icon-xs")
+    local ok_net, NetworkMgr = pcall(require, "ui/network/manager")
+    local wifi_on = ok_net and NetworkMgr.isWifiOn and NetworkMgr:isWifiOn()
+    table.insert(g, Kit.TintIcon:new{ icon = wifi_on and "leaf.sys.wifi" or "leaf.sys.wifi.off", size_token = "icon-xs", color = col })
+    table.insert(g, HorizontalSpan:new{ width = T.px("sp-2") })
+    local clock = os.date("%H:%M")
+    pcall(function()
+        local now = os.time()
+        local secs = tonumber(os.date("%H", now)) * 3600 + tonumber(os.date("%M", now)) * 60
+        clock = require("datetime").secondsToHour(secs, G_reader_settings:isTrue("twelve_hour_clock"))
+    end)
+    table.insert(g, TextWidget:new{ text = clock, face = L.face("ui-medium", "fs-xs"), fgcolor = col })
+    local pct
+    pcall(function()
+        local powerd = Device:getPowerDevice()
+        if Device:hasBattery() then pct = powerd:getCapacity() end
+    end)
+    if pct then
+        table.insert(g, HorizontalSpan:new{ width = T.px("sp-2") })
+        table.insert(g, Kit.TintIcon:new{ icon = "pt_i_battery", size_token = "icon-sm", color = col })
+        table.insert(g, HorizontalSpan:new{ width = T.px("sp-1") })
+        table.insert(g, TextWidget:new{ text = pct .. "%", face = L.face("ui-medium", "fs-xs"), fgcolor = col })
+    end
+    table.insert(g, HorizontalSpan:new{ width = right_pad or T.px("sp-4") })
+    local _ = s
+    return RightContainer:new{ dimen = geom(width, h), g }
 end
 
 return Kit

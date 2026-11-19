@@ -68,7 +68,7 @@ function M.apply(L)
     end
 
     ------------------------------------------------------------------ GO TO
-    local Goto = InputContainer:extend{ ui = nil, mode = "page", value = "" }
+    local Goto = InputContainer:extend{ ui = nil, mode = "page", value = "", _leaf_wants_scrim = true }
 
     function Goto:init()
         local W, H = Screen:getWidth(), Screen:getHeight()
@@ -204,7 +204,7 @@ function M.apply(L)
         -- foot: Skim · · · Cancel [Go]
         local foot_h = T.px("h-control") + 2 * T.px("sp-3")
         local fl = HorizontalGroup:new{ align = "center", HorizontalSpan:new{ width = T.px("sp-4") },
-            Kit.button{ label = _("Skim"), kind = "ghost", parent = self, callback = function()
+            Kit.icon_label_button{ icon = "leaf.rd.columns", label = _("Skim"), kind = "ghost", callback = function()
                 UIManager:close(self)
                 ui.gotopage:onShowSkimtoDialog()
             end } }

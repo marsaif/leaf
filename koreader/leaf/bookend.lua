@@ -133,7 +133,7 @@ function M.apply(L)
 
         local g = VerticalGroup:new{ align = "center" }
         -- hero
-        local cover_w = Screen:scaleBySize(76 * T.scale)
+        local cover_w = Screen:scaleBySize(118 * T.scale) -- .rd-end-hero .cv
         local cover_h = math.floor(cover_w * 1.5)
         pcall(function()
             local bb = require("apps/filemanager/filemanagerbookinfo"):getCoverImage(doc)
@@ -141,10 +141,11 @@ function M.apply(L)
                 local img = require("ui/widget/imagewidget"):new{ image = bb, width = cover_w, height = cover_h, scale_factor = 0 }
                 table.insert(g, require("ui/widget/container/framecontainer"):new{ bordersize = hair, color = T.color("border"),
                     padding = 0, radius = T.px("r-cover"), img })
-                table.insert(g, VerticalSpan:new{ width = T.px("sp-3") })
+                table.insert(g, VerticalSpan:new{ width = T.px("sp-4") })
             end
         end)
-        table.insert(g, TextWidget:new{ text = table.concat(require("util").splitToChars(_("THE END")), "\u{2009}"), face = L.face("ui-semibold", "fs-xs"), fgcolor = T.color("accent") })
+        -- letter-spacing .32em: a thin space plus a hair space between letters
+        table.insert(g, TextWidget:new{ text = table.concat(require("util").splitToChars(_("THE END")), "\u{2009}\u{200A}"), face = L.face("ui-semibold", "fs-xs"), fgcolor = T.color("accent") })
         table.insert(g, VerticalSpan:new{ width = T.px("sp-2") })
         local lead = TextWidget:new{ text = _("You finished") .. " ", face = L.face("display", "fs-display") }
         local lw = lead:getSize().w
@@ -219,7 +220,8 @@ function M.apply(L)
         label(_("STATUS"))
         local LeafSeg = require("leaf/widgets/seg")
         table.insert(sec, LeafSeg:new{ width = inner, selected = summary.status or "reading",
-            items = { { label = _("Reading"), key = "reading" }, { label = _("On hold"), key = "abandoned" }, { label = _("Finished"), key = "complete" } },
+            items = { { label = _("Reading"), key = "reading", icon = "leaf.lib.bookopen" }, { label = _("On hold"), key = "abandoned", icon = "leaf.end.pause" },
+                { label = _("Finished"), key = "complete", icon = "leaf.end.checks" } },
             on_select = function(key) self:setStatus(key) end })
 
         table.insert(sec, VerticalSpan:new{ width = T.px("sp-4") })
@@ -258,7 +260,7 @@ function M.apply(L)
             content = LeftContainer:new{ dimen = geom(math.min(inner, pw), pref_h), pref },
             callback = function() self:chooseAction() end })
 
-        local body = VerticalGroup:new{ align = "center", header, g, sec }
+        local body = VerticalGroup:new{ align = "center", Kit.status_strip(W), header, g, sec }
         local content_h = body:getSize().h
         body:resetLayout()
         local page

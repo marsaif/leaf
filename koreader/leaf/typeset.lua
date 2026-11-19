@@ -1159,7 +1159,12 @@ function M.apply(L)
         local s = T.px("icon-md")
         local smp_w = px(56)
         local tw = ctx.cw - s - 2 * T.px("sp-3") - smp_w
+        -- the book's current font first (the prototype lists it at the top, selected)
+        local ordered = {}
         for __, item in ipairs(rf.face_table) do
+            if item.menu_item_id and item.menu_item_id == rf.font_face then table.insert(ordered, 1, item) else table.insert(ordered, item) end
+        end
+        for __, item in ipairs(ordered) do
             local v = item.menu_item_id
             if v then
                 local fn, fi, mono = cre.getFontFaceFilenameAndFaceIndex(v)
