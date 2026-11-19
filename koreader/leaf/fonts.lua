@@ -41,6 +41,13 @@ local REDIRECT = {
     ["NotoSans-Bold.ttf"] = M.FILES["ui-semibold"],
     ["source/SourceSans3-Regular.ttf"] = M.FILES["ui"],
     ["source/SourceSans3-Bold.ttf"] = M.FILES["ui-semibold"],
+    ["source/SourceSans3-It.ttf"] = M.FILES["ui"],
+    ["source/SourceSans3-BoldIt.ttf"] = M.FILES["ui-semibold"],
+    -- Project: Title's serif (folder names, some captions) -> Leaf's book face
+    ["source/SourceSerif4-Regular.ttf"] = M.FILES["book"],
+    ["source/SourceSerif4-Bold.ttf"] = M.FILES["book-bold"],
+    ["source/SourceSerif4-It.ttf"] = M.FILES["book-italic"],
+    ["source/SourceSerif4-BoldIt.ttf"] = M.FILES["book-bolditalic"],
 }
 
 -- regular -> real bold variant

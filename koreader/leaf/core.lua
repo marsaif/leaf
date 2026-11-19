@@ -38,6 +38,7 @@ L.MODULES = {
     "menu",
     "lists",
     "plus",
+    "library",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
