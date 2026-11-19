@@ -78,6 +78,7 @@ MAP = {
     "cancel": "x",
     "check": "check",
     "plus": "plus",
+    "leaf.minus": "minus",  # Leaf's own: slider-row step button (KOReader has no minus icon)
     "edit": "pencil",
     "exit": "log-out",
     "home": "house",

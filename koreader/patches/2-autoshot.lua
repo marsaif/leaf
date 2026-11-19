@@ -76,6 +76,25 @@ local SCENES = {
     { "spin", function() show("ui/widget/spinwidget", {
         title_text = "Items per page", info_text = "Number of books shown on one page",
         value = 14, value_min = 6, value_max = 24, default_value = 14, callback = noop }) end },
+    { "spin-change", function()
+        -- moves the slider in code (as a tap at 90% would) to exercise the update path
+        local w = require("ui/widget/spinwidget"):new{
+            title_text = "Items per page", info_text = "Number of books shown on one page",
+            value = 14, value_min = 6, value_max = 24, default_value = 14, callback = noop }
+        UIManager:show(w)
+        UIManager:scheduleIn(0.5, function()
+            local s = w.value_widget.leaf_slider
+            if s then s.on_change(0.9, true) end
+        end)
+    end },
+    { "doublespin", function() show("ui/widget/doublespinwidget", {
+        title_text = "Page margins", info_text = "Left and right margins, in pixels",
+        left_text = "Left", left_value = 18, left_min = 0, left_max = 80, left_default = 15,
+        right_text = "Right", right_value = 18, right_min = 0, right_max = 80, right_default = 15,
+        callback = noop }) end },
+    { "datetime", function() show("ui/widget/datetimewidget", {
+        title_text = "Sleep timer", info_text = "Put the device to sleep after this much idle time",
+        hour = 0, min = 30, ok_text = "Set", callback = noop }) end },
     { "textviewer", function() show("ui/widget/textviewer", {
         title = "Book description",
         text = "A farm is taken over by its overworked, mistreated animals. With flaming idealism and stirring slogans, they set out to create a paradise of progress, justice, and equality." }) end },

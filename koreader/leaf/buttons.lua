@@ -132,7 +132,8 @@ function M.apply(L)
         local kinds = {}
         for i, e in ipairs(row) do
             local word = first_word(e.text or (e.text_func and e.text_func()))
-            if n == 1 then kinds[i] = "secondary"
+            if e.leaf_left then kinds[i] = "ghost" -- e.g. "Default · 14": a side action at the left edge
+            elseif n == 1 then kinds[i] = "secondary"
             elseif i < n then kinds[i] = "ghost"
             elseif DANGER[word] then kinds[i] = "danger"
             elseif CANCEL[word] then kinds[i] = "ghost"
@@ -169,14 +170,27 @@ function M.apply(L)
 
         -- restyle the buttons, then rebuild the row: right-aligned, gaps, no lines
         local buttons = self.buttons_layout[#self.buttons_layout]
-        local group = HorizontalGroup:new{ align = "center", HorizontalSpan:new{ width = self.width - total } }
+        -- [leaf_left buttons] <free space> [the others], like .ko-dialog-actions with a .grow
+        local left, right = {}, {}
         for i, b in ipairs(buttons) do
             b._leaf_kind = kinds[i]
             b:free()
             b:init()
-            if i > 1 then table.insert(group, HorizontalSpan:new{ width = gap }) end
-            table.insert(group, b)
+            table.insert(row[i].leaf_left and left or right, b)
         end
+        local group = HorizontalGroup:new{ align = "center" }
+        local function add(list)
+            for k, b in ipairs(list) do
+                if k > 1 then table.insert(group, HorizontalSpan:new{ width = gap }) end
+                table.insert(group, b)
+            end
+        end
+        -- `total` counted a gap between every pair of buttons; the free space replaces the one
+        -- between the left and the right group (if both exist)
+        local free = self.width - total + ((#left > 0 and #right > 0) and gap or 0)
+        add(left)
+        table.insert(group, HorizontalSpan:new{ width = free })
+        add(right)
         local c = self.container
         local replaced = false
         for i = #c, 1, -1 do
