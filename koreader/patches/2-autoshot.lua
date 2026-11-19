@@ -54,6 +54,14 @@ local SCENES = {
         text = "No dictionaries installed.\nDownload one from Settings › Dictionary." }) end },
     { "notify", function() require("ui/widget/notification"):notify("Cache cleared · 142 MB freed",
         require("ui/widget/notification").SOURCE_ALWAYS_SHOW) end },
+    { "info-toast", function() show("ui/widget/infomessage", { text = "Cache cleared · 142 MB freed", timeout = 3 }) end },
+    { "info-long", function() show("ui/widget/infomessage", {
+        text = "Can't open this file.\n\n“comic-chapter-12.cbz” looks damaged or incomplete. Try copying it to the device again." }) end },
+    { "notify-stack", function()
+        local N = require("ui/widget/notification")
+        N:notify("Font size 22", N.SOURCE_ALWAYS_SHOW)
+        N:notify("Bookmark added", N.SOURCE_ALWAYS_SHOW)
+    end },
     { "input", function()
         local d
         d = require("ui/widget/inputdialog"):new{
