@@ -75,8 +75,75 @@ local function leaf_english(en)
     return out
 end
 
+--[[ The Leaf Arabic layout (prototype LAYOUTS.arabic): rows of 12, 12 and shift + 9 + backspace;
+     shift = harakat and alef forms, ?١٢٣ = Arabic-Indic digits. Letters reuse KOReader's Arabic
+     keys (with their long-press variants); layers as KOReader: 1 shift, 2 letters, 3 sym2, 4 sym. ]]
+local function leaf_arabic(ar)
+    local function chars(str)
+        local t = {}
+        for c in str:gmatch("[%z\1-\127\194-\244][\128-\191]*") do table.insert(t, c) end
+        return t
+    end
+    -- KOReader's letter keys by character (layer 2), so popups come along
+    local by_char = {}
+    for _, row in ipairs(ar.keys) do
+        for _, e in ipairs(row) do
+            local v = e[2]
+            local ch = type(v) == "table" and v[1] or v
+            if type(ch) == "string" then by_char[ch] = v end
+        end
+    end
+    local function mark(c) -- combining marks show on a tatweel, as the prototype's labelOf()
+        if c:match("^[\204-\205][\128-\191]$") or c:match("^\217[\139-\146]$") or c == "\217\176" then
+            return { c, label = "ـ" .. c }
+        end
+        return c
+    end
+    local function row(letters, shift, sym, sym2)
+        local out = {}
+        for i, c in ipairs(letters) do
+            out[i] = { mark(shift[i] or c), by_char[c] or c, sym2[i] or "", sym[i] or "" }
+        end
+        return out
+    end
+    local shift1 = { "َ", "ً", "ُ", "ٌ", "ِ", "ٍ", "ْ", "ّ", "ـ", "«", "»", "؟" }
+    local shift2 = { "أ", "إ", "آ", "ٱ", "لا", "لأ", "لإ", "لآ", "؛", "،", ":", "!" }
+    local shift3 = { "ذ", "ئ", "ء", "ؤ", "ة", "ى", "٫", "…", "-" }
+    local row1 = row(chars("ضصثقفغعهخحجد"), shift1, chars("١٢٣٤٥٦٧٨٩٠−="), chars("~`|•√π÷×¶∆<>"))
+    local row2 = row(chars("شسيبلاتنمكطذ"), shift2, chars("@#_&-+()/٪{}"), chars("£¥$¢^°={}\\[]"))
+    local shift_key, backspace
+    for _, r in ipairs(ar.keys) do
+        for _, e in ipairs(r) do
+            if e.label == "\u{ED35}" then shift_key = e end
+            if e.label == "\u{E76D}" then backspace = e end
+        end
+    end
+    local row3 = { { label = "\u{ED35}", width = 1.5 } }
+    for _, e in ipairs(row(chars("ئءؤرىةوزظ"), shift3, chars("*\"':؛!؟«»"), chars("%©®™✓[]§¶"))) do table.insert(row3, e) end
+    table.insert(row3, { label = "\u{E76D}", width = 1.5, bold = backspace and backspace.bold })
+    local bottom = {
+        { "رمز", "رمز", "حرف", "حرف", width = 1.5 }, -- ?١٢٣ / أبج (KOReader's symbols key)
+        { label = "🌐", width = 1.1 },
+        { "،", "،", "،", "،" },
+        { label = "مسافة", " ", " ", " ", " ", width = 5.0 },
+        { ".", ".", ".", "." },
+        { label = "⮠", "\n", "\n", "\n", "\n", width = 2.0 },
+    }
+    local out = {}
+    for key, v in pairs(ar) do out[key] = v end
+    out.keys = { row1, row2, row3, bottom }
+    return out
+end
+
 function M.apply(L)
     local T = L.T
+    do
+        local name = "ui/data/keyboardlayouts/ar_keyboard"
+        local ok, ar = pcall(require, name)
+        if ok and type(ar) == "table" and ar.keys then
+            package.loaded[name] = leaf_arabic(ar)
+        end
+    end
     do
         local name = "ui/data/keyboardlayouts/en_keyboard"
         local ok, en = pcall(require, name)
@@ -133,11 +200,14 @@ function M.apply(L)
         local kb = self.keyboard
         if not label and kb.symbolmode_keys[self.label] ~= nil then
             -- the symbols key reads ?123 / ABC (.kb-t)
-            label = TextWidget:new{ text = kb.symbolmode and "ABC" or "?123", face = L.face("ui-semibold", "fs-sm"), fgcolor = T.color(fg) }
+            local arabic = (kb.getKeyboardLayout and kb:getKeyboardLayout() or ""):match("^ar")
+            local text = kb.symbolmode and (arabic and "أبج" or "ABC") or (arabic and "?١٢٣" or "?123")
+            label = TextWidget:new{ text = text, face = L.face("ui-semibold", "fs-sm"), fgcolor = T.color(fg) }
         elseif not label and self.key == " " then
             -- the space bar names the keyboard language (.kb-lang)
             local lang = kb.getKeyboardLayout and kb:getKeyboardLayout() or "en"
-            local name = require("ui/language"):getLanguageName(lang) or lang
+            local NAMES = { ar = "العربية", en = "English" } -- as the prototype's LAYOUTS[].name
+            local name = NAMES[lang] or require("ui/language"):getLanguageName(lang) or lang
             label = TextWidget:new{ text = name, face = L.face("ui", "fs-xs"), fgcolor = T.color("text-3") }
         end
         if not label and icon then
@@ -147,7 +217,9 @@ function M.apply(L)
             label = self.label_widget -- a key that already draws its own icon
         elseif not label then
             local text = self.label
-            label = TextWidget:new{ text = text, face = L.face("ui", "fs-key"), fgcolor = T.color(fg),
+            -- Arabic letters: Noto Naskh at --fs-key-ar (.kb-ar)
+            local is_ar = text:find("[\216-\219]") ~= nil
+            label = TextWidget:new{ text = text, face = is_ar and L.face("arabic", "fs-key-ar") or L.face("ui", "fs-key"), fgcolor = T.color(fg),
                 max_width = w - 2 * T.px("sp-1") }
         end
         local content = CenterContainer:new{ dimen = Geom:new{ w = w, h = h }, label }

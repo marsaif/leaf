@@ -106,6 +106,18 @@ local SCENES = {
             if kb then kb:setLayer("Sym") end
         end)
     end },
+    { "input-ar", function()
+        local d = require("ui/widget/inputdialog"):new{ title = "Rename collection", input = "روايات",
+            buttons = {{ { text = "Cancel", id = "close", callback = noop }, { text = "Save", is_enter_default = true, callback = noop } }} }
+        UIManager:show(d)
+        d:onShowKeyboard()
+        UIManager:scheduleIn(0.3, function()
+            local kb = d._input_widget and d._input_widget.keyboard
+            if kb then kb:setKeyboardLayout("ar") end
+        end)
+        -- the layout is saved in settings: put English back once the shot is taken
+        UIManager:scheduleIn(1.4, function() G_reader_settings:saveSetting("keyboard_layout", "en") end)
+    end },
     { "buttondialog", function() show("ui/widget/buttondialog", {
         title = "Animal Farm",
         buttons = {
