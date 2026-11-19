@@ -7,7 +7,7 @@
       value still opens "Enter number"; the slider sets the value from the tap/drag position
       (value_table pickers move by index). Days-in-month logic for dates is kept.
     * SpinWidget: dialog laid out like the prototype: title (--fs-head), range (--fs-sm --text-3),
-      description (--text-2), the slider row, then [Default · 14] … [Close] [Apply].
+      description (--text-2), the slider row, then [Default · 14] … [Cancel] [Set] (KOReader's Close / Apply).
       Same fields and callbacks as KOReader's (value_widget, spin_frame, movable, vgroup, layout,
       callback(self), extra/option buttons, keep_shown_on_apply, addWidget()).
 --]]
@@ -29,6 +29,16 @@ local function unit_suffix(unit)
     if not unit or unit == "" then return "" end
     if unit == "°" then return unit end
     return "\u{202F}" .. unit
+end
+
+-- KOReader's stock action labels -> the prototype's (Cancel · Set); a caller's own labels stay
+local function cancel_label(t)
+    local _ = require("gettext")
+    return (t == nil or t == _("Close")) and _("Cancel") or t
+end
+local function ok_label(t)
+    local _ = require("gettext")
+    return (t == nil or t == _("Apply")) and _("Set") or t
 end
 
 local function fmt(self, v)
@@ -76,8 +86,10 @@ function M.apply(L)
         local row_w = self.leaf_width or math.floor(math.min(Screen:getWidth(), Screen:getHeight()) * 0.6)
         local gap = T.px("sp-2")
         local icon = T.px("icon-sm")
+        -- .ko-sr .step: 36px wide; 44px tall (the .ko-hit expander keeps the touch target)
         local step_pad = math.floor((T.px("hit") - icon) / 2)
-        local step_w = icon + 2 * step_pad
+        local step_pad_h = math.floor((Screen:scaleBySize(36 * T.scale) - icon) / 2)
+        local step_w = icon + 2 * step_pad_h
 
         -- value column: wide enough for the widest value, at least 48px, at most 40% of the row
         local face = require("ui/font"):getFace(value_face, T.fs("fs-md"))
@@ -109,6 +121,7 @@ function M.apply(L)
         local function step_button(name, src)
             return IconButton:new{
                 icon = name, width = icon, height = icon, padding = step_pad,
+                padding_left = step_pad_h, padding_right = step_pad_h,
                 callback = src.callback, hold_callback = src.hold_callback, show_parent = self.show_parent,
             }
         end
@@ -138,7 +151,7 @@ function M.apply(L)
                     self:update()
                 else
                     self.formatted_value = self.value_table and self.value or fmt(self, self.value)
-                    self.text_value:setText(tostring(self.formatted_value) .. unit_suffix(self.unit), self.width)
+                    self.text_value:setText(tostring(self.formatted_value) .. unit_suffix(self.unit)) -- (natural width: right-aligned in its column)
                     self.leaf_slider:setPct(pct_of(self))
                     UIManager:setDirty(self.show_parent, "ui", self.dimen)
                 end
@@ -150,15 +163,18 @@ function M.apply(L)
             text = tostring(self.formatted_value) .. unit,
             bordersize = 0, padding = 0, padding_h = 0, radius = 0,
             text_font_face = value_face, text_font_size = T.fs("fs-md"), text_font_bold = false,
-            width = value_w, show_parent = self.show_parent, callback = input_cb,
+            show_parent = self.show_parent, callback = input_cb,
         }
+        -- .ko-sr .val: a 48px+ column, the value right-aligned
+        local value_col = require("ui/widget/container/rightcontainer"):new{
+            dimen = Geom:new{ w = value_w, h = self.text_value:getSize().h }, self.text_value }
 
         self[1] = HorizontalGroup:new{ align = "center",
             label_widget or HorizontalSpan:new{ width = 0 },
             minus, HorizontalSpan:new{ width = gap },
             self.leaf_slider, HorizontalSpan:new{ width = gap },
             plus, HorizontalSpan:new{ width = gap },
-            self.text_value,
+            value_col,
         }
         self.layout = { { minus, plus, self.text_value } }
         -- dimen must be a real Geom: UIManager refreshes call Geom methods on it later
@@ -173,7 +189,7 @@ function M.apply(L)
         if not self.leaf_slider then return orig(self) end
         orig(self)
         -- KOReader drops the unit when it re-sets the text: put it back, move the knob
-        self.text_value:setText(tostring(self.formatted_value) .. unit_suffix(self.unit), self.width)
+        self.text_value:setText(tostring(self.formatted_value) .. unit_suffix(self.unit)) -- (natural width: right-aligned in its column)
         self.leaf_slider:setPct(pct_of(self))
     end, "NumberPickerWidget:update")
 
@@ -294,12 +310,12 @@ function M.apply(L)
                 vw:update()
             end))
         end
-        table.insert(actions, { text = self.cancel_text, callback = function()
+        table.insert(actions, { text = cancel_label(self.cancel_text), callback = function()
             if self.cancel_callback then self.cancel_callback() end
             self:onClose()
         end })
-        table.insert(actions, { text = self.ok_text,
-            enabled = self.ok_always_enabled or self.original_value ~= current,
+        table.insert(actions, { text = ok_label(self.ok_text),
+            enabled = true, -- (the prototype's Set is always available; an unchanged value just applies again)
             callback = function()
                 self.value, self.value_index = vw:getValue()
                 self.original_value = self.value
@@ -331,6 +347,11 @@ function M.apply(L)
 
     ---------------------------------------------------------------- DoubleSpinWidget: two stacked rows
     local DoubleSpinWidget = require("ui/widget/doublespinwidget")
+    -- KOReader sizes it at 80% of the screen when the caller gives no width: use the dialog width
+    L.wrap(DoubleSpinWidget, "init", function(orig, self)
+        if not self.width and not self.width_factor then self.width = dialog_width(nil) end
+        return orig(self)
+    end, "DoubleSpinWidget:init")
     L.wrap(DoubleSpinWidget, "update", function(orig, self, left_value, right_value)
         local prev_offset = self.movable and self.movable:getMovedOffset()
         local prev_alpha = self.movable and self.movable.alpha
@@ -367,12 +388,12 @@ function M.apply(L)
                 self.right_widget:update()
             end))
         end
-        table.insert(actions, { text = self.cancel_text, callback = function()
+        table.insert(actions, { text = cancel_label(self.cancel_text), callback = function()
             if self.cancel_callback then self.cancel_callback() end
             self:onClose()
         end })
-        table.insert(actions, { text = self.ok_text,
-            enabled = self.ok_always_enabled or self.left_value ~= lv or self.right_value ~= rv,
+        table.insert(actions, { text = ok_label(self.ok_text),
+            enabled = true,
             callback = function()
                 self.left_value = self.left_widget:getValue()
                 self.right_value = self.right_widget:getValue()
@@ -457,11 +478,11 @@ function M.apply(L)
                 if not self.keep_shown_on_apply then self:onClose() end
             end))
         end
-        table.insert(actions, { text = self.cancel_text, callback = function()
+        table.insert(actions, { text = cancel_label(self.cancel_text), callback = function()
             if self.cancel_callback then self.cancel_callback(self) end
             self:onClose()
         end })
-        table.insert(actions, { text = self.ok_text, callback = function()
+        table.insert(actions, { text = ok_label(self.ok_text), callback = function()
             if self.callback then
                 self.year = self.year_widget:getValue()
                 self.month = self.month_widget:getValue()

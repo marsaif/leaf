@@ -16,7 +16,6 @@ local LineWidget = require("ui/widget/linewidget")
 local ProgressWidget = require("ui/widget/progresswidget")
 local RadioMark = require("ui/widget/radiomark")
 local TextWidget = require("ui/widget/textwidget")
-local TitleBar = require("ui/widget/titlebar")
 local UIManager = require("ui/uimanager")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
@@ -97,12 +96,12 @@ function Catalog:init()
         LineWidget:new{ dimen = Geom:new{ w = inner, h = T.px("hairline") }, background = Blitbuffer.COLOR_BLACK },
     }
 
-    local title = TitleBar:new{
-        width = W, title = "Leaf · design system", subtitle = "KOReader widgets with the Leaf styling",
-        with_bottom_line = true, close_callback = function() UIManager:close(self) end, show_parent = self,
-    }
+    -- the prototype catalog's page head: ← Design system (UI.pageHead)
+    local K = require("leaf/syskit")(L)
+    local title = K.header{ width = W, title = "Design system", parent = self,
+        back = function() UIManager:close(self) end }
     self[1] = FrameContainer:new{
-        width = W, height = Screen:getHeight(), bordersize = 0, padding = 0, background = T.color("surface"),
+        width = W, height = Screen:getHeight(), bordersize = 0, padding = 0, background = T.color("bg"),
         VerticalGroup:new{ align = "left", title,
             FrameContainer:new{ bordersize = 0, padding = 0, padding_left = side, padding_right = side, body } },
     }

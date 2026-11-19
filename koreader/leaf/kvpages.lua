@@ -271,7 +271,7 @@ function M.apply(L)
         local hh = self._leaf_header_h
         local back = self.callback_return and function() self:onReturn() end or function() self:onClose() end
         local left = HorizontalGroup:new{ align = "center", HorizontalSpan:new{ width = T.px("sp-2") },
-            icon_button("chevron.left", back, nil, self.show_parent) }
+            icon_button("leaf.kb.left", back, nil, self.show_parent) } -- UI.pageHead back = arrow-left
         local right = HorizontalGroup:new{ align = "center" }
         if self.title_bar_left_icon then
             local ic = self.title_bar_left_icon
@@ -423,12 +423,70 @@ function M.apply(L)
         return orig(self)
     end, "ScrollTextWidget:init")
 
+    --- the TextViewer header (UI.pageHead): ← title … [Find] [Top] [Bottom] [⋮]; a small viewer
+    --- (dialog) gets title … [⋮] ✕. Stands in for KOReader's TitleBar: getHeight(), left_button.
+    function TextViewer:_leafHeader(o, page)
+        local W = o.width or self.width
+        local hh = T.px("h-header")
+        local parent = self
+        local function by_id(id)
+            return function()
+                local b = self.button_table and self.button_table:getButtonById(id)
+                if b and b.enabled ~= false and b.callback then b.callback() end
+            end
+        end
+        local function hold_id(id)
+            return function()
+                local b = self.button_table and self.button_table:getButtonById(id)
+                if b and b.hold_callback then b.hold_callback() end
+            end
+        end
+        local left = HorizontalGroup:new{ align = "center", HorizontalSpan:new{ width = T.px("sp-2") } }
+        local right = HorizontalGroup:new{ align = "center" }
+        if page then
+            table.insert(left, icon_button("leaf.kb.left", o.close_callback, nil, parent))
+            table.insert(left, HorizontalSpan:new{ width = T.px("sp-1") })
+        else
+            table.insert(left, HorizontalSpan:new{ width = T.px("sp-3") })
+        end
+        if self._leaf_footless and not self._leaf_short then
+            table.insert(right, icon_button("leaf.sys.search", by_id("find"), hold_id("find"), parent))
+            table.insert(right, icon_button("leaf.ts.arrow-up-to-line", by_id("top"), nil, parent))
+            table.insert(right, icon_button("leaf.ts.arrow-down-to-line", by_id("bottom"), nil, parent))
+        end
+        local menu
+        if o.left_icon then
+            menu = icon_button("leaf.more.v", o.left_icon_tap_callback, nil, parent)
+            table.insert(right, menu)
+        end
+        if not page then table.insert(right, icon_button("close", o.close_callback, nil, parent)) end
+        table.insert(right, HorizontalSpan:new{ width = T.px("sp-2") })
+        local title_w = W - left:getSize().w - right:getSize().w - T.px("sp-2")
+        table.insert(left, TextWidget:new{ text = strip_pua(tostring(o.title or "")):gsub("\n", " "),
+            face = L.face("ui-semibold", "fs-head"), max_width = math.max(title_w, T.px("h-row")) })
+        left:resetLayout()
+        local header = OverlapGroup:new{ dimen = Geom:new{ w = W, h = hh },
+            LeftContainer:new{ dimen = Geom:new{ w = W, h = hh }, left },
+            RightContainer:new{ dimen = Geom:new{ w = W, h = hh }, right } }
+        header.getHeight = function() return hh end
+        header.left_button = menu or left[2] -- (KOReader anchors its menu on it, and focuses it on D-pad devices)
+        return header
+    end
+
     L.wrap(TextViewer, "init", function(orig, self, reinit)
         local W, H = Screen:getWidth(), Screen:getHeight()
         if not reinit then
             self._leaf_page = not (self.height and self.height < H * 0.6)
+            -- a short plain text (book description, a note...) is a dialog like the prototype's info
+            -- dialog: title, the text, ✕; the card hugs the text
+            if self._leaf_page and not self.height and not self.buttons_table and not self.file
+                    and type(self.text) == "string" and #self.text <= 700 and not self.text_type:find("code") then
+                self._leaf_page = false
+                self._leaf_short = true
+            end
         end
         local page = self._leaf_page
+        self._leaf_wants_scrim = not page -- (a dialog dims what is under it, as every Leaf dialog)
         if type(self.title) == "string" then self.title = self.title:gsub("%s*:%s*$", "") end
         local text_types = G_reader_settings:readSetting("textviewer_text_types")
         local ts = text_types and text_types[self.text_type] or self.text_types[self.text_type] or {}
@@ -446,16 +504,65 @@ function M.apply(L)
             self._leaf_face = Font:getFace(Font.fontmap["smallinfont"] or "smallinfont",
                 math.floor(T.fs("fs-sm") * size / base + 0.5))
         end
-        local foot_extra = 2 * T.px("sp-2") + hair
+        -- a full page with only KOReader's default buttons (Find, Top, Bottom, Close) has no footer:
+        -- ← closes, and Find / Top / Bottom / the menu are header actions (prototype view-html header)
+        if not reinit then
+            self._leaf_footless = (page or self._leaf_short) and not self.buttons_table and not self.file
+        end
+        local footless = self._leaf_footless
+        local foot_extra = footless and 0 or (2 * T.px("sp-2") + hair)
         if page then
             self.width = W
             self.height = H - foot_extra
+        elseif self._leaf_short then
+            self.width = math.min(math.floor(W * 0.86), Screen:scaleBySize(400 * T.scale))
+            self.height = math.floor(H * 0.7)
         else
             self.height = self.height and (self.height - foot_extra) or nil
         end
         self.text_margin = T.px("sp-4")
         self.text_padding = T.px("sp-4") - hair
-        orig(self, reinit)
+        if self._leaf_short then
+            -- a dialog body (.ko-dialog-body): aligned with the title, Inter --fs-md in --text-2
+            self.text_margin = 0
+            self.text_padding = T.px("sp-5")
+            self.fgcolor = T.color("text-2")
+            self._leaf_face = require("ui/font"):getFace(fonts.FILES["ui"], math.floor(T.fs("fs-md") * size / base + 0.5))
+        end
+        -- KOReader's title bar -> the Leaf header (built in place, so the text area gets its height)
+        local TitleBar = require("ui/widget/titlebar")
+        local ButtonTable = require("ui/widget/buttontable")
+        local orig_tb, orig_bt = TitleBar.new, ButtonTable.new
+        local viewer = self
+        TitleBar.new = function(_class, o) return viewer:_leafHeader(o, page) end
+        if footless then
+            -- the button table still exists (ids, enable states, focus) but takes no room
+            ButtonTable.new = function(class, o)
+                local bt = orig_bt(class, o)
+                bt.getSize = function(b) return Geom:new{ x = 0, y = 0, w = b.width or 0, h = 0 } end
+                return bt
+            end
+        end
+        local ok, err = pcall(orig, self, reinit)
+        -- a short text on a page without footer: the card hugs the text (prototype .ko-scroll card),
+        -- the page keeps the full height
+        local full_h = self.height
+        local tb = ok and footless and self.is_txt and self.scroll_widget and self.scroll_widget.text_widget
+        if tb and tb.vertical_string_list and tb.line_height_px then
+            local th = #tb.vertical_string_list * tb.line_height_px
+            local avail = self.scroll_widget:getSize().h
+            local spare = avail - th - T.px("sp-2")
+            if th > 0 and spare > 0 then
+                self.height = self.height - spare
+                ok, err = pcall(orig, self, true)
+            end
+        end
+        TitleBar.new, ButtonTable.new = orig_tb, orig_bt
+        if not ok then error(err, 0) end
+        if self.height ~= full_h and page then
+            self.frame.height = full_h
+            self.height = full_h -- (a later reinit, e.g. the font size menu, measures again)
+        end
 
         -- frame: a Leaf page (or a Leaf dialog for small viewers)
         local f = self.frame
@@ -470,6 +577,7 @@ function M.apply(L)
         tw.color = T.color("border")
         tw.radius = T.px("r-lg")
         tw.margin = 0 -- (a FrameContainer paints its background over its margin: the centring keeps the gap)
+        if self._leaf_short then tw.bordersize = 0 end -- (a dialog body, no card in a card)
         -- default buttons: human labels instead of arrows
         for _i, id in ipairs({ "top", "bottom" }) do
             local b = self.button_table and self.button_table:getButtonById(id)
@@ -477,8 +585,13 @@ function M.apply(L)
                 b:setText(id == "top" and _("Top") or _("Bottom"), b.width)
             end
         end
-        -- footer: hairline + padding around the button rows
         local vg = f[1]
+        if footless then
+            table.remove(vg) -- (the hidden button table)
+            vg:resetLayout()
+            return
+        end
+        -- footer: hairline + padding around the button rows
         local bt = vg[#vg]
         vg[#vg] = VerticalGroup:new{
             LineWidget:new{ dimen = Geom:new{ w = self.width, h = hair }, background = T.color("border") },

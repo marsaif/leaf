@@ -55,5 +55,15 @@
   "sleep-preview": "#/home?o=sleep&o.preview=cover",
   "about": "#/home?o=about",
   "quick": "#/home?o=quick",
-  "catalog": "#/catalog"
+  "catalog": "#/catalog",
+  "menu-sub": "#/library?o=main-menu&o.ctx=fm&o.tab=settings&o.path=%5B1%5D",
+  "multiconfirm": "#/home?o=confirm&o.title=A%20file%20with%20this%20name%20already%20exists.&o.ok=Replace",
+  "notify": "#/home?o=info&o.toast=Cache%20cleared%20%C2%B7%20142%20MB%20freed",
+  "kv-stats": "#/stats?range=week",
+  "textviewer-long": "#/reader?id=animal-farm&o=view-html&o.ch=0&o.pid=2&o.a=3&o.b=9",
+  "description": "#/library?o=info&o.title=Book%20description&o.body=A%20farm%20is%20taken%20over%20by%20its%20overworked%2C%20mistreated%20animals.",
+  "calendar": "#/stats?range=month",
+  "catalog-controls": "#/catalog?page=controls",
+  "stats-month": "#/stats?range=month",
+  "input-filled": "#/home?o=input&o.title=Rename&o.value=Animal%20Farm%20(EN-AR).epub&o.ok=Rename"
 }

@@ -27,15 +27,18 @@ function LeafSeg:init()
     local h = T.px("h-seg")
     local row = HorizontalGroup:new{ align = "center" }
     self.cells = {}
+    -- e-ink: the accent is only a grey, so the selected segment gets a --text outline (.eink .ko-seg button.on)
+    local eink = not require("device").screen:isColorEnabled()
+    local sel_color = eink and "text" or "accent"
     for i, it in ipairs(self.items) do
         local on = it.key == self.selected
         local cell = FrameContainer:new{
-            bordersize = on and T.px("bw-md") or 0, color = T.color("accent"),
+            bordersize = on and T.px("bw-md") or 0, color = T.color(sel_color),
             background = T.color(on and "surface" or "surface-2"), radius = T.px("r-inner"),
             padding = 0, margin = 0,
             CenterContainer:new{ dimen = Geom:new{ w = cell_w - 2 * (on and T.px("bw-md") or 0), h = h - 2 * (on and T.px("bw-md") or 0) },
                 TextWidget:new{ text = it.label, face = L.face(on and "ui-semibold" or "ui", "fs-sm"),
-                    fgcolor = T.color(on and "accent" or "text-2"), max_width = cell_w - T.px("sp-2") } },
+                    fgcolor = T.color(on and sel_color or "text-2"), max_width = cell_w - T.px("sp-2") } },
         }
         if i > 1 then table.insert(row, HorizontalSpan:new{ width = pad }) end
         table.insert(row, cell)

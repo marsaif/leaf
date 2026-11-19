@@ -68,9 +68,15 @@ function M.apply(L)
         -- small text buttons (footers: "Page 1 of 4")
         caption = { fg = "text-2", face = "ui", size = "fs-sm" },
     }
+    -- on e-ink the danger red is only a mid grey: make it the strongest button (.eink .ko-btn--danger)
+    local DANGER_EINK = { bg = "text", fg = "bg", bold = true }
+    local function kind(name)
+        if name == "danger" and not require("device").screen:isColorEnabled() then return DANGER_EINK end
+        return KIND[name]
+    end
 
     local function color_label(self)
-        local k = KIND[self._leaf_kind]
+        local k = kind(self._leaf_kind)
         local lw = self.label_widget
         -- (truthiness, not ~= nil: LuaJIT calls a cdata colour's __eq even against nil)
         if not (k and lw and lw.fgcolor) then return end
@@ -85,7 +91,7 @@ function M.apply(L)
     end
 
     L.wrap(Button, "init", function(orig, self)
-        local k = KIND[self._leaf_kind]
+        local k = kind(self._leaf_kind)
         if k then
             self.background = k.bg and T.color(k.bg) or nil
             self.radius = T.px("r-md")
