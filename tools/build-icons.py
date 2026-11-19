@@ -80,7 +80,14 @@ MAP = {
     "plus": "plus",
     "leaf.minus": "minus",  # Leaf's own: slider-row step button (KOReader has no minus icon)
     # Leaf's own: on-screen keyboard function keys (prototype keyboardHTML)
-    "leaf.trash": "trash-2",  # Leaf's own: destructive confirm title (UI.dialog danger icon)
+    "leaf.trash": "trash-2",
+    # Leaf's own: menu rows the keyword table had no icon for
+    "leaf.mi.play": "play",
+    "leaf.mi.toc": "list-tree",
+    "leaf.mi.goto": "corner-down-right",
+    "leaf.mi.skim": "gallery-horizontal",
+    "leaf.mi.map": "map",
+    "leaf.mi.proxy": "network",  # Leaf's own: destructive confirm title (UI.dialog danger icon)
     "leaf.kb.shift": "arrow-big-up",
     "leaf.kb.caps": "arrow-big-up-dash",
     "leaf.kb.backspace": "delete",

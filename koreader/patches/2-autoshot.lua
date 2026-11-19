@@ -42,6 +42,28 @@ local noop = function() end
 local SCENES = {
     { "fm", noop },
     { "menu", function() FM().menu:onShowMenu() end },
+    { "menu-settings", function()
+        local fm = FM()
+        fm.menu:onShowMenu()
+        local tm = fm.menu.menu_container and fm.menu.menu_container[1]
+        if tm then
+            for i, tab in ipairs(tm.tab_item_table) do
+                if tab.icon == "appbar.settings" then tm.bar:switchToTab(i) end
+            end
+        end
+    end },
+    { "menu-sub", function()
+        local fm = FM()
+        fm.menu:onShowMenu()
+        local tm = fm.menu.menu_container and fm.menu.menu_container[1]
+        if not tm then return end
+        for i, tab in ipairs(tm.tab_item_table) do
+            if tab.icon == "appbar.settings" then tm.bar:switchToTab(i) end
+        end
+        for _, item in ipairs(tm.item_table) do
+            if item.sub_item_table or item.sub_item_table_func then tm:onMenuSelect(item) break end
+        end
+    end },
     { "plus", function() FM():onShowPlusMenu() end },
     { "confirm", function() show("ui/widget/confirmbox", {
         text = "Delete this book?\nThe file and its highlights, notes and reading progress will be removed.",

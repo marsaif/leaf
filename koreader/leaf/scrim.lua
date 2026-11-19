@@ -54,6 +54,9 @@ function M.apply(L)
         for _, class in pairs(classes) do
             if is_a(w, class) then return true end
         end
+        -- the top menu is shown inside a container: [1] is the TouchMenu
+        local TouchMenu = package.loaded["ui/widget/touchmenu"]
+        if TouchMenu and type(w[1]) == "table" and is_a(w[1], TouchMenu) then return true end
         return false
     end
 
