@@ -1,11 +1,9 @@
 --[[
     Leaf list pages (safety-net items 17, 18): Menu / MenuItem (table of contents, bookmarks,
-    search results, dictionary and OPDS lists, history fallback...) and KeyValuePage (book
-    information, statistics lists).
+    search results, dictionary and OPDS lists, history fallback...). KeyValuePage: leaf/kvpages.lua.
 
     * Menu: Leaf title (TitleBar left-aligned, --fs-head, Menu's own big title face dropped);
       no dot leaders; row text Inter --fs-md, the right-hand text (page numbers) --fs-sm.
-    * KeyValuePage: keys and values Inter --fs-md, keys regular weight (KOReader: bold).
     Row heights, paging and every callback stay KOReader's; the bespoke reader sheets
     (contents / bookmarks / notes with the book header) are their own port.
 --]]
@@ -57,24 +55,6 @@ function M.apply(L)
         end, "MenuItem:init")
     else
         L.err("lists: MenuItem not found, rows keep KOReader's fonts")
-    end
-
-    local KeyValuePage = require("ui/widget/keyvaluepage")
-    local KeyValueItem
-    local i = 1
-    while true do
-        local name, value = debug.getupvalue(KeyValuePage._populateItems or KeyValuePage.init, i)
-        if not name then break end
-        if name == "KeyValueItem" then KeyValueItem = value break end
-        i = i + 1
-    end
-    if KeyValueItem then
-        KeyValueItem.key_font_name = ui
-        KeyValueItem.value_font_name = ui
-        L.wrap(KeyValueItem, "init", function(orig, self)
-            self.font_size = T.fs("fs-md")
-            return orig(self)
-        end, "KeyValueItem:init")
     end
 end
 

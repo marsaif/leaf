@@ -157,6 +157,49 @@ local SCENES = {
     { "bookdetails", function()
         FM().bookinfo:show(G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub")
     end },
+    -- kvpages scenes (KeyValuePage, TextViewer)
+    { "kv-bookinfo", function()
+        -- the Leaf book details page, then its ⋮: KOReader's full "Book information" list
+        FM().bookinfo:show(G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub")
+        UIManager:scheduleIn(0.5, function()
+            local top = UIManager._window_stack[#UIManager._window_stack].widget
+            if top.orig_show then top.orig_show(top.bookinfo, top.doc_settings_or_file, top.props_in) end
+        end)
+    end, wait = 2.5 },
+    { "kv-stats", function()
+        local kv = {}
+        local days = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" }
+        table.insert(kv, { "Total time spent reading", "4 h 06 min" })
+        table.insert(kv, { "Pages read", "412" })
+        table.insert(kv, { "Average time per page", "36 s", separator = true })
+        for i = 1, 24 do
+            table.insert(kv, { string.format("%s, Nov %d", days[(i - 1) % 7 + 1], i),
+                string.format("%d min · %d pages", 10 + i * 3, 4 + i), callback = noop,
+                separator = i % 7 == 0 })
+        end
+        show("ui/widget/keyvaluepage", { title = "Books by week", value_overflow_align = "right",
+            callback_return = noop, kv_pairs = kv })
+    end },
+    { "kv-single", function() show("ui/widget/keyvaluepage", {
+        title = "Current statistics", value_align = "right", single_page = true,
+        kv_pairs = { { "Current period", "00:24:12" }, { "Current pages", "18" },
+            { "Today", "00:41:05" }, { "Pages today", "31", separator = true },
+            { "Time to read", "02:13:40" }, { "Read pages", "39 of 112" },
+            { "Percentage completed", "35%" }, { "Average time per page", "1 min 19 s", separator = true },
+            { "Book title", "Animal Farm: A Fairy Story, with an introduction and notes on the text" },
+            { "Started reading", "2026-11-02" }, { "Last read", "2026-11-19" },
+            { "Days reading this book", "12" }, { "Description", "Tap to display", callback = noop } } }) end },
+    { "textviewer-long", function()
+        local p = "Mr. Jones, of the Manor Farm, had locked the hen-houses for the night, but was too drunk to remember to shut the pop-holes. With the ring of light from his lantern dancing from side to side, he lurched across the yard, kicked off his boots at the back door, drew himself a last glass of beer from the barrel in the scullery, and made his way up to bed, where Mrs. Jones was already snoring."
+        show("ui/widget/textviewer", { title = "Note · Chapter I", text = table.concat({ p, p, p, p, p, p, p }, "\n\n") })
+    end },
+    { "description", function()
+        FM().bookinfo:onShowBookDescription(nil, G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub")
+    end },
+    { "textviewer-code", function()
+        show("ui/widget/textviewer", { title = "Page HTML", text_type = "code",
+            text = '<section id="chapter-1" class="chapter">\n  <p class="para" id="p2">\n    The slow on for of Benjamin at the bright, such which Clover that could light old.\n  </p>\n</section>' })
+    end },
     { "catalog", function()
         local ok, catalog = pcall(require, "leaf/catalog")
         if ok then catalog.show() else logger.info("autoshot: no leaf/catalog yet") end
@@ -183,6 +226,34 @@ local SCENES = {
         if ok and chrome.show then chrome.show(RUI()) end
     end },
     { "bookmarks", function() RUI().bookmark:onShowBookmark() end },
+    -- kvpages scenes (reader): the paragraph-translate patch panel, on the EN-AR edition (opens it: keep last)
+    { "translate", function()
+        local book = G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub"
+        require("apps/reader/readerui"):showReader(book)
+        UIManager:scheduleIn(4, function()
+            local ui = RUI()
+            ui:handleEvent(require("ui/event"):new("GotoPage", 12))
+            local RH = require("apps/reader/modules/readerhighlight")
+            local function up(fn, want)
+                local i = 1
+                while true do
+                    local n, v = debug.getupvalue(fn, i)
+                    if not n then return end
+                    if n == want then return v end
+                    i = i + 1
+                end
+            end
+            local Panel = up(RH.lookupDictWord, "Panel")
+            local block_xp = up(RH.lookupDictWord, "block_xpointer")
+            local neighbor = Panel and up(Panel.build, "neighbor")
+            if not (Panel and block_xp) then logger.info("autoshot: no translate patch") return end
+            local doc = ui.document
+            local block = block_xp(doc:getXPointer())
+            local para = doc:getTextFromXPointer(block) or ""
+            if not para:find("%a%a%a%a") and neighbor then block, para = neighbor(doc, block, 1) end
+            if block then UIManager:show(Panel:new{ ui = ui, doc = doc, block = block, para = para, word = "farm" }) end
+        end)
+    end, wait = 7 },
 }
 
 local wanted = os.getenv("KO_AUTOSHOT_SCENES")
