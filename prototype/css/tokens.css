@@ -1,0 +1,294 @@
+/* ==========================================================================
+   Folio — design tokens for the KOReader redesign.
+   Two themes: "dark" (default, matches the concept) and "paper" (light, e-ink friendly),
+   plus the "eink" preview modifier. Everything in the UI uses these variables: screen CSS
+   never contains raw colours, px font sizes, font families/weights, radii or shadows
+   (tools/audit.py enforces it). Each token has a one-line comment; that comment is the spec
+   for the Lua port.
+   Tokens that blend theme colours are defined on `.theme-dark, .theme-paper` (not :root) so
+   they resolve against the theme of the element that declares them.
+   ========================================================================== */
+
+:root {
+  /* ---------- font families ---------- */
+  --font-ui: "Inter", "Source Sans 3", system-ui, sans-serif;               /* all UI text */
+  --font-display: "Playfair Display", "Source Serif 4", Georgia, serif;     /* top-level titles, book-title heroes */
+  --font-book: "Literata", "Source Serif 4", Georgia, serif;                /* book text, quotes, snippets */
+  --font-arabic: "Noto Naskh Arabic", serif;                                /* Arabic text (UI and book) */
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; /* paths, code, terminal */
+  --font-scan: "EB Garamond", "Literata", serif;                            /* scanned-PDF page art only */
+
+  /* ---------- type scale (UI) ---------- */
+  --fs-2xs: 10.5px;   /* tiny badges, nav labels, chart ticks (the only step below xs) */
+  --fs-xs: 11px;      /* captions, section labels, meta lines */
+  --fs-sm: 13px;      /* metadata, secondary text, small buttons */
+  --fs-md: 15px;      /* rows, body UI, buttons */
+  --fs-head: 17px;    /* sheet / drawer / dialog / level-2 page headers (Inter semibold) */
+  --fs-lg: 18px;      /* card titles, compact metrics */
+  --fs-xl: 22px;      /* large glyphs (keys), quote text */
+  --fs-glyph: 24px;   /* glyph marks: app mark, numeric keypad */
+  --fs-display: 26px; /* top-level screen titles (Playfair) and hero book titles */
+  --fs-2xl: 30px;     /* hero numbers, book-details title */
+  --fs-3xl: 40px;     /* page-number entry, PDF watermark */
+  --fs-hero: 44px;    /* hero metrics (books this year, charging %) */
+  --fs-jumbo: 52px;   /* Stats hero time, Welcome wordmark */
+  /* content sizes (book page chrome, panel copies of book text, page art) */
+  --fs-folio: 12px;        /* reading page header: chapter name */
+  --fs-folio-ar: 12.5px;   /* reading page header in Arabic books */
+  --fs-reading: 16.5px;    /* book paragraph quoted in a panel (translate) */
+  --fs-reading-ar: 19px;   /* Arabic translation paragraph */
+  --fs-cover-sm: 9px;      /* text-cover author line (cover art) */
+  --fs-cover-xs: 8px;      /* text-cover title of a missing book (cover art) */
+  --fs-scan: 11.4px;       /* scanned-PDF body text (page art) */
+  --fs-scan-run: 7.4px;    /* scanned-PDF running head (page art) */
+  --fs-key: 21px;          /* on-screen keyboard: letter keys */
+  --fs-key-ar: 25px;       /* on-screen keyboard: Arabic letter keys (Naskh runs small) */
+
+  /* ---------- weights, line heights, tracking ---------- */
+  --fw-regular: 400;   /* body */
+  --fw-medium: 500;    /* row titles, buttons */
+  --fw-semibold: 600;  /* titles, selected state, emphasis (bold in UI = semibold) */
+  --fw-bold: 700;      /* search-hit emphasis only */
+  --lh-none: 1;        /* metrics, glyphs, icons */
+  --lh-tight: 1.15;    /* display titles */
+  --lh-head: 1.25;     /* headers and card titles */
+  --lh-body: 1.45;     /* UI paragraphs, hints, notes */
+  --lh-para: 1.5;      /* dialog / body copy */
+  --lh-book: 1.6;      /* book text shown in panels */
+  --ls-caps: .08em;    /* uppercase eyebrows / section labels */
+  --ls-tag: .04em;     /* uppercase tags and pills */
+  --ls-title: -.01em;  /* display and large titles */
+  --ls-metric: -.02em; /* big numbers */
+  --ls-wide: .02em;    /* status strip, small meta */
+
+  /* ---------- spacing (4px grid, with half steps) ---------- */
+  --sp-half: 2px;  /* hairline gaps (icon + label nudges) */
+  --sp-1: 4px;     /* tight gaps */
+  --sp-1h: 6px;    /* icon-to-text gap in chips and meta lines */
+  --sp-2: 8px;     /* default small gap */
+  --sp-2h: 10px;   /* compact paddings */
+  --sp-3: 12px;    /* card inner gap */
+  --sp-3h: 14px;   /* button side padding in dialogs */
+  --sp-4: 16px;    /* card padding, group margin */
+  --sp-5: 20px;    /* screen side padding */
+  --sp-6: 24px;    /* section gap */
+  --sp-8: 32px;    /* large section gap */
+  --sp-10: 40px;   /* empty-state padding */
+
+  /* ---------- radii ---------- */
+  --r-tick: 2px;     /* thin bars, ticks, progress fills */
+  --r-thumb: 3px;    /* small cover thumbnails, bar tops */
+  --r-cover: 4px;    /* book covers, key caps, cornered tags */
+  --r-check: 5px;    /* checkboxes */
+  --r-sm: 6px;       /* small buttons, crumbs, steppers */
+  --r-inner: 7px;    /* segment inside a --r-md track (concentric) */
+  --r-md: 10px;      /* buttons, inputs, icon tiles, tracks */
+  --r-mark: 12px;    /* 44px app-mark tiles, toggle track */
+  --r-lg: 14px;      /* cards, groups, popovers */
+  --r-xl: 20px;      /* sheets, dialogs, device frames */
+  --r-pill: 999px;   /* chips, pills, badges */
+
+  /* ---------- border widths ---------- */
+  --hairline: 1px;   /* every divider and card border */
+  --bw-md: 1.5px;    /* radio / check outlines, selection rings, diagram strokes */
+  --bw-lg: 2px;      /* strong outlines, e-ink selection, underlines */
+  --bw-xl: 3px;      /* accent edge bars, selected preview rings */
+
+  /* ---------- control sizes ---------- */
+  --h-control: 40px;     /* buttons (every variant), compact inputs */
+  --h-row: 48px;         /* list row */
+  --row-h: var(--h-row); /* legacy alias of --h-row */
+  --h-row-compact: 44px; /* popover row, dense row */
+  --h-chip: 32px;        /* chips, small icon buttons, steppers */
+  --h-seg: 34px;         /* segmented-control button */
+  --h-input: 44px;       /* text input */
+  --h-header: 56px;      /* screen / sheet header min height */
+  --h-status: 26px;      /* device status strip */
+  --h-nav: 60px;         /* bottom navigation */
+  --h-badge: 20px;       /* cover % badge, tag pill */
+  --hit: 44px;           /* minimum touch target */
+  --touch: var(--hit);   /* legacy alias of --hit (App.hitAreas() expands smaller controls to it) */
+
+  /* ---------- icons (lucide) ---------- */
+  --icon-2xs: 12px;  /* inline meta icons (progress caption, ribbons, stars in titles) */
+  --icon-xs: 14px;   /* icons inside chips, segments, eyebrows, meta lines */
+  --icon-sm: 16px;   /* App.icon(n, "sm"): status strip, small buttons */
+  --icon-tile: 18px; /* icon inside a 32px icon tile, slider-row label */
+  --icon-md: 20px;   /* default icon: rows, header buttons */
+  --icon-key: 22px;  /* keyboard keys, drawer rail */
+  --icon-lg: 24px;   /* App.icon(n, "lg") */
+  --icon-xl: 28px;   /* empty-state circles, big glyph buttons (stars) */
+  --icon-2xl: 40px;  /* empty state, battery bolt */
+  --stroke-hair: 1.2;   /* glyphs >= 28px */
+  --stroke-light: 1.3;  /* large decorative icons */
+  --stroke: 1.6;        /* default */
+  --stroke-strong: 2;   /* selected tab / nav icon, emphasis */
+  --stroke-bold: 2.4;   /* ticks on accent fills, tiny glyphs */
+
+  /* ---------- layers and motion ---------- */
+  --z-raised: 1;    /* content raised over siblings (bars, zone labels) */
+  --z-sticky: 2;    /* sticky headers, overlapping covers */
+  --z-badge: 3;     /* badges over covers */
+  --z-layer: 20;    /* overlay stack (.ko-layer) */
+  --z-toast: 60;    /* toast above everything */
+  --ease: cubic-bezier(.2, .7, .2, 1); /* every UI transition */
+  --dur: 160ms;        /* hover / popover / dialog */
+  --dur-page: 200ms;   /* full page push, keyboard dock */
+  --dur-sheet: 220ms;  /* bottom sheet slide-up, drawer drill */
+
+  /* ---------- highlight palette (KOReader): the ONLY source for highlight tints, dots, swatches ---------- */
+  --hl-c-yellow: #f0cd45;  /* yellow highlight */
+  --hl-c-green: #84c46e;   /* green highlight */
+  --hl-c-blue: #6fa2d6;    /* blue highlight */
+  --hl-c-red: #e07c6e;     /* red highlight */
+  --hl-c-purple: #a98ad0;  /* purple highlight */
+  --hl-c-gray: #9a9aa2;    /* gray highlight */
+  --hl-u-blue: #2f6fb5;    /* blue underline ink */
+  --hl-u-red: #c0473a;     /* red underline ink */
+
+  /* ---------- fixed colours (theme independent) ---------- */
+  --on-cover: #f2f2f4;                       /* text / ring drawn over cover art */
+  --cover-scrim: rgba(14, 14, 17, .78);      /* badge background over cover art */
+  --cover-scrim-soft: rgba(14, 14, 17, .45); /* unselected selection mark over cover art */
+  --eink-ink: #000;                          /* pure black, e-ink only rules */
+  --qr-bg: #fff;                             /* QR code quiet zone */
+  --qr-ink: #111;                            /* QR code modules */
+  --scan-paper: #f2eee3;                     /* scanned-PDF paper */
+  --scan-ink: #24211d;                       /* scanned-PDF text */
+  --scan-ink-2: #4a453d;                     /* scanned-PDF running head / labels */
+  --scan-ink-soft: rgba(36, 33, 29, .35);    /* scanned-PDF ornaments */
+  --scan-watermark: rgba(60, 50, 40, .07);   /* scanned-PDF library stamp */
+  --scan-dirt: rgba(40, 35, 30, .35);        /* scanned-PDF specks */
+  --scan-gutter: rgba(40, 35, 30, .06);      /* scanned-PDF gutter shadow */
+  --shadow-ink: rgba(0, 0, 0, .28);          /* drop-shadow colour inside page art (cqw sized) */
+
+  /* ---------- shadows that do not depend on the theme ---------- */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, .18);   /* lifted page thumbnails */
+  --shadow-xs: 0 4px 10px rgba(0, 0, 0, .12);   /* small page miniatures */
+  --shadow-thumb: 0 1px 4px rgba(0, 0, 0, .35); /* slider thumb */
+  --ring-swatch: inset 0 0 0 1px rgba(0, 0, 0, .25); /* edge of a colour dot */
+  --scan-edge: 0 0 0 .5px rgba(0, 0, 0, .18);   /* scanned-PDF paper edge */
+}
+
+/* ---------- dark (default) ---------- */
+.theme-dark {
+  --bg: #0e0e11;            /* app background */
+  --bg-raised: #141418;     /* screen chrome, sheets, drawers */
+  --surface: #1b1b20;       /* cards */
+  --surface-2: #232329;     /* inputs, pressed, nested */
+  --surface-3: #2c2c33;     /* hover / selected / tracks */
+  --border: #2a2a31;        /* hairlines */
+  --border-strong: #3a3a43; /* outlines, overlay borders */
+  --text: #f2f2f4;          /* primary text */
+  --text-2: #b4b4bd;        /* secondary text */
+  --text-3: #91919c;        /* tertiary: >= 4.4:1 on every surface */
+  --disabled: #55555e;      /* disabled text and icons */
+  --accent: #e8a898;        /* warm peach (concept): selection, progress, primary */
+  --accent-ink: #1a1112;    /* text on accent */
+  --accent-soft: rgba(232, 168, 152, .14); /* selected fill */
+  --danger: #ef8a7c;        /* destructive */
+  --danger-ink: #1a1112;    /* text on danger */
+  --scrim: rgba(0, 0, 0, .55); /* behind overlays */
+  --shadow: 0 12px 40px rgba(0, 0, 0, .55), 0 2px 8px rgba(0, 0, 0, .4); /* floating panels */
+  --shadow-cover: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 6px 16px rgba(0, 0, 0, .35); /* book cover */
+  --page: #f7f5ef;          /* reading page stays paper-like even in dark UI */
+  --page-ink: #1b1a17;      /* book text */
+  --page-2: #6b675f;        /* page header / footer text */
+  color-scheme: dark;
+}
+
+/* ---------- paper (light, e-ink friendly) ---------- */
+.theme-paper {
+  --bg: #f6f5f1;            /* app background */
+  --bg-raised: #fbfaf7;     /* screen chrome, sheets, drawers */
+  --surface: #ffffff;       /* cards */
+  --surface-2: #efeee9;     /* inputs, pressed, nested */
+  --surface-3: #e4e2db;     /* hover / selected / tracks */
+  --border: #e2e0d9;        /* hairlines */
+  --border-strong: #c9c6bc; /* outlines, overlay borders */
+  --text: #141413;          /* primary text */
+  --text-2: #55534d;        /* secondary text */
+  --text-3: #6f6c64;        /* tertiary */
+  --disabled: #b9b6ad;      /* disabled text and icons */
+  --accent: #a4553f;        /* terracotta: selection, progress, primary */
+  --accent-ink: #ffffff;    /* text on accent */
+  --accent-soft: rgba(164, 85, 63, .10); /* selected fill */
+  --danger: #b3261e;        /* destructive */
+  --danger-ink: #ffffff;    /* text on danger */
+  --scrim: rgba(20, 20, 19, .28); /* behind overlays */
+  --shadow: 0 10px 30px rgba(0, 0, 0, .12), 0 1px 3px rgba(0, 0, 0, .08); /* floating panels */
+  --shadow-cover: 0 0 0 1px var(--border), 0 4px 10px rgba(0, 0, 0, .08); /* book cover */
+  --shadow-key-paper: 0 0 0 1px var(--border-strong), 0 1.5px 0 var(--border-strong); /* keyboard key cap (paper: stronger edge) */
+  --page: #ffffff;          /* reading page */
+  --page-ink: #141413;      /* book text */
+  --page-2: #6f6c64;        /* page header / footer text */
+  color-scheme: light;
+}
+
+/* ---------- derived values: every ring and color-mix the UI uses, named once (resolved per theme) ---------- */
+.theme-dark, .theme-paper {
+  /* rings and edge bars (box-shadow values) */
+  --ring: 0 0 0 var(--hairline) var(--border);                    /* outer hairline ring */
+  --ring-strong: 0 0 0 var(--hairline) var(--border-strong);      /* outer outline ring (frames, previews) */
+  --ring-inset: inset 0 0 0 var(--hairline) var(--border);        /* inner hairline */
+  --ring-inset-strong: inset 0 0 0 var(--hairline) var(--border-strong); /* inner outline */
+  --ring-accent: inset 0 0 0 var(--bw-md) var(--accent);          /* selected outline (segments, pills) */
+  --ring-accent-thin: inset 0 0 0 var(--hairline) var(--accent);  /* selected card outline (doubles the border) */
+  --ring-eink: inset 0 0 0 var(--bw-lg) var(--text);              /* selected outline in e-ink */
+  --ring-text: 0 0 0 var(--bw-lg) var(--text);                    /* outer strong outline (shift key) */
+  --cutout: 0 0 0 var(--bw-lg) var(--bg);                         /* gap ring separating overlapping items */
+  --ring-selected: 0 0 0 var(--bw-xl) var(--accent), 0 0 0 5px var(--bg); /* selected picture option (sleep-screen frame) */
+  --bar-accent: inset var(--bw-xl) 0 0 var(--accent);             /* "current" edge bar on a row */
+  --bar-eink: inset 4px 0 0 var(--text);                          /* "current" edge bar in e-ink */
+  --ring-page: 0 0 0 var(--hairline) var(--page-ink);             /* cover edge on page-coloured art (lock screen) */
+  --pulse-ring: 0 0 0 10px var(--accent-soft);                    /* "searching" pulse halo (animated) */
+  --underline-accent: inset 0 calc(-1 * var(--bw-lg)) 0 var(--accent); /* selected word underline */
+  --shadow-knob: 0 0 0 1px var(--border-strong), 0 1px 2px rgba(0, 0, 0, .25); /* toggle knob */
+  --shadow-key: 0 0 0 1px var(--border), 0 1px 0 var(--border-strong);          /* keyboard key cap (dark) */
+  /* accent blends */
+  --accent-tint: color-mix(in srgb, var(--accent) 35%, transparent); /* highlight-style sample under text */
+  --heat-0: var(--surface-2);                                        /* calendar heatmap: no reading */
+  --heat-1: color-mix(in srgb, var(--accent) 30%, var(--surface-2)); /* heatmap: a little */
+  --heat-2: color-mix(in srgb, var(--accent) 55%, var(--surface-2)); /* heatmap: some */
+  --heat-3: var(--accent);                                           /* heatmap: goal met */
+  --heat-4: color-mix(in srgb, var(--accent) 55%, var(--text));      /* heatmap: a lot */
+  /* highlight blends (UI lists and swatches) */
+  --hl-swatch-yellow: color-mix(in srgb, var(--hl-c-yellow) 80%, var(--text-3)); /* yellow swatch bar (readable on cards) */
+  --hl-tint-yellow: color-mix(in srgb, var(--hl-c-yellow) 30%, transparent);     /* quoted highlight in lists: yellow */
+  --hl-tint-green: color-mix(in srgb, var(--hl-c-green) 30%, transparent);       /* ... green */
+  --hl-tint-blue: color-mix(in srgb, var(--hl-c-blue) 30%, transparent);         /* ... blue */
+  --hl-tint-red: color-mix(in srgb, var(--hl-c-red) 30%, transparent);           /* ... red */
+  --hl-tint-purple: color-mix(in srgb, var(--hl-c-purple) 30%, transparent);     /* ... purple */
+  /* highlight blends on the reading page */
+  --hl-yellow: color-mix(in srgb, var(--hl-c-yellow) 48%, var(--page)); /* "lighten" highlight on the page: yellow */
+  --hl-green: color-mix(in srgb, var(--hl-c-green) 45%, var(--page));   /* ... green */
+  --hl-blue: color-mix(in srgb, var(--hl-c-blue) 45%, var(--page));     /* ... blue */
+  --hl-red: color-mix(in srgb, var(--hl-c-red) 45%, var(--page));       /* ... red */
+  --hl-purple: color-mix(in srgb, var(--hl-c-purple) 45%, var(--page)); /* ... purple */
+  --hl-gray: color-mix(in srgb, var(--page-ink) 22%, var(--page));      /* ... gray */
+  --hl-ink-blue: color-mix(in srgb, var(--hl-u-blue) 80%, var(--page-ink)); /* blue underline on the page */
+  --hl-ink-red: color-mix(in srgb, var(--hl-u-red) 80%, var(--page-ink));   /* red underline on the page */
+  --hl-underline: color-mix(in srgb, var(--page-ink) 70%, transparent);    /* default underline; e-ink highlight line */
+  --hl-strike: color-mix(in srgb, var(--page-ink) 75%, transparent);       /* strikeout line */
+  --hl-eink: color-mix(in srgb, var(--page-ink) 14%, var(--page));         /* "lighten" highlight in e-ink (grey + underline) */
+  --sel: color-mix(in srgb, var(--page-ink) 15%, var(--page));             /* live text selection on the page */
+  /* page blends (reading page, page art) */
+  --page-tint: color-mix(in srgb, var(--page-ink) 18%, var(--page));       /* progress track on page-coloured art */
+  --page-scan: color-mix(in srgb, var(--page-ink) 9%, var(--page));        /* desk behind a scanned PDF page */
+  --page-scan-ink: color-mix(in srgb, var(--page-ink) 78%, var(--page));   /* footer text on the scan desk */
+  --page-dim-ink: color-mix(in srgb, var(--page-ink) 74%, var(--page));    /* book text at reduced contrast */
+  --page-rule: color-mix(in srgb, var(--page-ink) 8%, transparent);        /* two-column rule */
+  --page-line: color-mix(in srgb, var(--page-ink) 11%, transparent);       /* footer progress track */
+  --page-line-fill: color-mix(in srgb, var(--page-ink) 72%, transparent);  /* footer progress fill */
+  --page-tick: color-mix(in srgb, var(--page-ink) 40%, transparent);       /* footer chapter ticks */
+  --page-ornament: color-mix(in srgb, var(--page-ink) 35%, transparent);   /* chapter ornament lines */
+  --page-quote-rule: color-mix(in srgb, var(--page-ink) 18%, transparent); /* bilingual paragraph rule */
+  --page-mark-ring: color-mix(in srgb, var(--page-ink) 22%, transparent);  /* translation marker ring */
+  --page-skeleton: color-mix(in srgb, var(--page-ink) 28%, transparent);   /* text lines in preset previews */
+  --page-skeleton-strong: color-mix(in srgb, var(--page-ink) 38%, transparent); /* text lines in the margin diagram */
+}
+
+/* ---------- e-ink preview: 16-level grayscale, no animation, no shadows ---------- */
+.eink .ko-screen { filter: grayscale(1) contrast(1.05); }
+.eink * { transition: none !important; animation: none !important; }
+.eink .ko-screen { --shadow: 0 0 0 1px var(--border-strong); } /* floating panels get an outline instead */

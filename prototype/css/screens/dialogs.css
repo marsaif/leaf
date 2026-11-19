@@ -1,0 +1,116 @@
+/* ==========================================================================
+   Tools · dialogs and system sheets — layout only.
+   Components: .ko-dialog (UI.dialog), .ko-sheet / .ko-sheet-head (UI.sheetHead),
+   .kb-field (App.kbField), .ko-kv, .ko-meter, .ko-card, .ko-icon-tile, .ko-selmark.
+   ========================================================================== */
+
+/* ---------- input / confirm / info ---------- */
+.dl-item { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); padding: var(--sp-2h); }
+.dl-item-c { width: 30px; flex: none; }
+.dl-item-t { font-weight: var(--fw-semibold); font-size: var(--fs-md); }
+.dl-item-s { font-size: var(--fs-xs); color: var(--text-3); margin-top: 1px; }
+.dl-input.is-empty .ko-btn--primary { opacity: .45; }   /* OK looks unavailable until something is typed (still tappable: it shakes the field) */
+/* input dialogs sit above the docked keyboard */
+.layer-dialog .dl-input, .layer-sheet .dl-input { top: calc((100% - 248px) / 2); }
+.dl-kbdock { position: absolute; left: 0; right: 0; bottom: 0; animation: ko-up var(--dur-page) var(--ease); box-shadow: var(--shadow); }
+.dl-eye { visibility: visible !important; background: transparent; }
+
+/* ---------- frontlight ---------- */
+.fl-sliders { padding: 0 0 var(--sp-1); }
+.fl-sliders.off { opacity: .4; pointer-events: none; }
+.fl-rows { padding-bottom: var(--sp-3); border-top: var(--hairline) solid var(--border); margin-top: var(--sp-1); }
+/* the on/off switch of a sheet lives in its first row, not in the header */
+.fl-top, .wf-top { padding: 0 var(--sp-1); }
+
+/* ---------- quick settings ---------- */
+.qk-meta { display: flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--text-3); margin-top: 3px; }
+.qk-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-2); padding: 0 var(--sp-4); }
+.qk-tile { position: relative; }
+.qk-main { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-half); padding: var(--sp-3); text-align: left; min-height: 92px; }
+.qk-l { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text); }
+.qk-s { font-size: var(--fs-xs); color: var(--text-3); max-width: 100%; }
+.qk-more { position: absolute; top: var(--sp-1h); right: var(--sp-1); width: var(--h-chip); height: var(--h-chip); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--text-3); }
+.qk-sliders { padding: var(--sp-3) 0 var(--sp-4); }
+/* screen-specific: quick-settings tile — "on" is a raised tile with an accent icon disc (the disc carries the state in e-ink) */
+.qk-ico { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--text-2); margin-bottom: var(--sp-2); }
+.qk-tile.on { background: var(--surface-2); border-color: var(--border-strong); }
+.qk-tile.on .qk-ico { background: var(--accent); color: var(--accent-ink); }
+.qk-tile.on .qk-s { color: var(--text-2); }
+.qk-tile:active { background: var(--text); }
+/* end screen-specific */
+
+/* ---------- wifi ---------- */
+.wf { height: 88%; }
+.wf-body { flex: 1; padding-bottom: var(--sp-5); }
+.wf-cur { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-2) var(--sp-4) 0; padding: var(--sp-4); border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--surface); border: var(--hairline) solid var(--border); border-bottom: 0; }
+.wf-cur-i { width: var(--hit); height: var(--hit); border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.wf-cur-n { font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+.wf-cur-s { display: flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--text-2); margin-top: var(--sp-half); }
+.wf-cur-a { display: flex; gap: var(--sp-2); margin: 0 var(--sp-4); padding: 0 var(--sp-4) var(--sp-4); background: var(--surface); border: var(--hairline) solid var(--border); border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+.wf-sig.s1 .ko-i { color: var(--text-3); }
+.wf-name { display: block; font-weight: var(--fw-medium); }
+.wf-row { min-height: 58px; }
+.wf-list .ko-row + .ko-row::before { left: 68px; }
+.wf-add { color: var(--text-2); padding-top: var(--sp-1h); padding-bottom: var(--sp-1h); }
+.wf-foot { display: flex; gap: var(--sp-2); align-items: center; font-size: var(--fs-xs); color: var(--text-3); padding: var(--sp-3) var(--sp-5); }
+.wf-off { padding-top: var(--sp-8); }
+
+/* ---------- sleep screen picker ---------- */
+.sl-wrap { padding: 0 var(--sp-4) var(--sp-6); container-type: inline-size; }
+.sl-intro { color: var(--text-2); font-size: var(--fs-sm); margin: 0 var(--sp-1) var(--sp-4); line-height: var(--lh-para); }
+.sl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4) var(--sp-3); }
+@container (min-width: 760px) { .sl-grid { grid-template-columns: repeat(4, 1fr); } }
+.sl-opt { display: flex; flex-direction: column; gap: var(--sp-2); text-align: left; }
+.sl-frame { position: relative; aspect-ratio: 3 / 4; border-radius: var(--r-md); overflow: hidden; box-shadow: var(--ring-strong); container-type: inline-size; height: 250px; width: auto; align-self: center; }
+.sl-opt.on .sl-frame { box-shadow: var(--ring-selected); }
+.sl-cap { display: flex; align-items: flex-start; gap: var(--sp-2); padding: 0 var(--sp-half); width: 188px; align-self: center; }
+.sl-cap .ko-radio { margin-top: 1px; }
+.sl-cap b { display: block; font-weight: var(--fw-semibold); font-size: var(--fs-md); }
+.sl-cap .grow > span { font-size: var(--fs-xs); color: var(--text-3); }
+.sl .ko-group { margin: 0; }
+
+/* screen-specific: screensaver renders (page art in --page colours, sized in container units so thumbnails and full screen match) */
+.ss { position: absolute; inset: 0; background: var(--page); color: var(--page-ink); overflow: hidden; container-type: inline-size; }
+.ss-cover { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8cqw 9cqw 7cqw; }
+.ss-book { height: 62%; aspect-ratio: 2 / 3; flex: none; box-shadow: 0 2cqw 6cqw var(--shadow-ink), 0 0 0 .3cqw var(--page-ink); border-radius: .8cqw; overflow: hidden; }
+.ss-book svg { display: block; width: 100%; height: 100%; }
+.ss-band { width: 100%; margin-top: 8cqw; text-align: center; }
+.ss-t { font-family: var(--font-display); font-size: 7.5cqw; font-weight: var(--fw-semibold); line-height: 1.1; }
+.ss-a { font-size: 4cqw; color: var(--page-2); margin-top: 1cqw; }
+.ss-p { height: 1.2cqw; background: var(--page-tint); border-radius: 1cqw; margin-top: 4cqw; overflow: hidden; position: relative; }
+.ss-p span { display: block; height: 100%; background: var(--page-ink); }
+.ss-m { display: flex; justify-content: space-between; font-size: 3.4cqw; color: var(--page-2); margin-top: 2cqw; }
+.ss-quote { display: flex; flex-direction: column; justify-content: center; padding: 10cqw; }
+.ss-qm { font-family: var(--font-display); font-size: 30cqw; line-height: .6; height: 14cqw; }
+.ss-qt { font-family: var(--font-book); font-size: 7cqw; line-height: 1.35; font-style: italic; }
+.ss-qa { font-size: 4cqw; color: var(--page-2); margin-top: 5cqw; }
+.ss-foot { position: absolute; left: 7cqw; right: 7cqw; bottom: 5cqw; display: flex; justify-content: space-between; font-size: 3.4cqw; color: var(--page-2); }
+.ss-sleep { background: var(--page-ink); color: var(--page); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.ss-moon .ko-i { width: 14cqw; height: 14cqw; stroke-width: var(--stroke-hair); }
+.ss-z { font-family: var(--font-display); font-style: italic; font-size: 12cqw; margin-top: 3cqw; }
+.ss-hint { font-size: 3.8cqw; opacity: .7; margin-top: 2cqw; }
+.ss-custom svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ss-file { position: absolute; left: 0; right: 0; bottom: 4cqw; text-align: center; font-size: 3.4cqw; color: var(--page); }
+/* end screen-specific */
+.ss-full { position: absolute; inset: 0; cursor: pointer; }
+.ss-full-hint { position: absolute; top: var(--sp-4); left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: var(--sp-2) var(--sp-3h); border-radius: var(--r-pill); font-size: var(--fs-sm); white-space: nowrap; z-index: var(--z-badge); }
+
+/* ---------- about ---------- */
+.ab { max-height: calc(100% - 40px); }
+.ab-x { position: absolute; top: var(--sp-2h); right: var(--sp-2h); }
+.ab-head { display: flex; align-items: center; gap: var(--sp-4); }
+/* screen-specific: the app mark is a logo (Playfair "K" on accent) */
+.ab-mark { width: var(--hit); height: var(--hit); border-radius: var(--r-mark); background: var(--accent); color: var(--accent-ink); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-glyph); font-weight: var(--fw-bold); flex: none; }
+/* end screen-specific */
+.ab-name { font-family: var(--font-display); font-size: var(--fs-xl); font-weight: var(--fw-semibold); line-height: 1.1; }
+.ab-ver { font-size: var(--fs-sm); color: var(--text-2); margin-top: 3px; }
+.ab-tag { font-size: var(--fs-sm); color: var(--text-3); line-height: var(--lh-para); margin: var(--sp-3) 0 var(--sp-3); }
+.ab-list { margin-top: 0; }
+.ab-store { margin: var(--sp-4) 0; }
+.ab-ok { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3); }
+.ab-ok .ko-i { color: var(--accent); }
+.ab-ok b { display: block; font-size: var(--fs-md); }
+.ab-ok span { font-size: var(--fs-xs); color: var(--text-3); }
+.ab-links { display: flex; justify-content: center; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); }
+.ab-links button { font-size: var(--fs-sm); color: var(--text-2); padding: var(--sp-2); }
+.ab-links i { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }

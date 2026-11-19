@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Folio — KOReader redesign prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens/home.css">
+  <link rel="stylesheet" href="css/screens/library.css">
+  <link rel="stylesheet" href="css/screens/reader.css">
+  <link rel="stylesheet" href="css/screens/menus.css">
+  <link rel="stylesheet" href="css/screens/search.css">
+  <link rel="stylesheet" href="css/screens/stats.css">
+  <link rel="stylesheet" href="css/screens/dialogs.css">
+  <link rel="stylesheet" href="css/screens/extras.css">
+  <link rel="stylesheet" href="css/screens/system.css">
+  <link rel="stylesheet" href="css/screens/catalog.css">
+
+  <style>
+    /* ---------- designer shell (outside the device; not part of the design) ---------- */
+    body { background: #08080a; color: #c9c9d1; font-family: Inter, system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+    body.shell-light { background: #d9d7d0; color: #2a2a2a; }
+    #designer { width: 270px; flex: none; border-right: 1px solid #1e1e24; display: flex; flex-direction: column; background: #0d0d10; }
+    .shell-light #designer { background: #ecebe6; border-color: #cfccc3; }
+    #designer h1 { font-size: 15px; margin: 18px 18px 2px; color: #fff; font-weight: 600; letter-spacing: -.01em; }
+    .shell-light #designer h1 { color: #111; }
+    #designer .sub { font-size: 11.5px; color: #77778a; margin: 0 18px 14px; }
+    #designer .controls { padding: 0 14px 12px; display: grid; gap: 8px; border-bottom: 1px solid #1e1e24; }
+    .shell-light #designer .controls { border-color: #cfccc3; }
+    .ctl { display: flex; gap: 4px; background: #16161b; padding: 3px; border-radius: 9px; }
+    .shell-light .ctl { background: #dddbd4; }
+    .ctl button { flex: 1; font: 500 12px Inter, sans-serif; color: #8a8a99; padding: 6px 4px; border-radius: 7px; }
+    .ctl button.on { background: #2a2a32; color: #fff; }
+    .shell-light .ctl button.on { background: #fff; color: #111; }
+    #nav { flex: 1; overflow-y: auto; padding: 8px 8px 24px; scrollbar-width: thin; }
+    #nav .grp { font: 600 10.5px Inter, sans-serif; letter-spacing: .09em; text-transform: uppercase; color: #5d5d6c; margin: 14px 10px 4px; }
+    #nav a { display: block; padding: 6px 10px; border-radius: 7px; font-size: 12.5px; color: inherit; text-decoration: none; }
+    #nav a:hover { background: #18181d; }
+    .shell-light #nav a:hover { background: #dedcd5; }
+    #nav a.on { background: #23232a; color: #fff; }
+    .shell-light #nav a.on { background: #fff; color: #111; }
+    #stage { flex: 1; display: flex; overflow: auto; padding: 24px; }
+    #stage > div { margin: auto; } /* centred, but scrolls instead of clipping when the window is small */
+    .device { background: #1c1c1f; border-radius: 34px; padding: 26px 22px 54px; box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 1px #2c2c31; position: relative; }
+    .device::after { content: ""; position: absolute; left: 50%; bottom: 20px; width: 70px; height: 4px; border-radius: 4px; background: #2d2d33; transform: translateX(-50%); }
+    .shell-light .device { background: #2b2b2e; }
+    .device .ko-screen { width: var(--dw); height: var(--dh); border-radius: 4px; }
+    #hashline { font: 11px ui-monospace, monospace; color: #55556a; text-align: center; margin-top: 10px; max-width: 700px; overflow-wrap: anywhere; }
+    /* screenshot mode: ?bare hides the designer panel */
+    body.bare #designer, body.bare #hashline { display: none; }
+    body.bare #stage { padding: 0; } body.bare .device { border-radius: 0; padding: 0; box-shadow: none; } body.bare .device::after { display: none; }
+  </style>
+</head>
+<body>
+  <aside id="designer">
+    <h1>Folio</h1>
+    <div class="sub">KOReader redesign · interactive prototype</div>
+    <div class="controls">
+      <div class="ctl" id="ctl-theme"><button data-v="dark">Dark</button><button data-v="paper">Paper</button></div>
+      <div class="ctl" id="ctl-eink"><button data-v="color">Colour</button><button data-v="eink">E-ink preview</button></div>
+      <div class="ctl" id="ctl-size"><button data-v="600x800">6″</button><button data-v="632x842">6.8″</button><button data-v="744x992">7″</button><button data-v="1000x750">Land.</button></div>
+    </div>
+    <div id="nav"></div>
+  </aside>
+  <main id="stage">
+    <div>
+      <div class="device"><div class="ko-screen theme-dark" id="screen"><div id="screen-root"></div><div id="layer-root"></div></div></div>
+      <div id="hashline"></div>
+    </div>
+  </main>
+
+  <script src="js/core.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/data/books.js"></script>
+  <script src="js/data/menus.js"></script>
+  <script src="js/screens/home.js"></script>
+  <script src="js/screens/library.js"></script>
+  <script src="js/screens/reader.js"></script>
+  <script src="js/screens/reader-panels.js"></script>
+  <script src="js/screens/menus.js"></script>
+  <script src="js/screens/search.js"></script>
+  <script src="js/screens/stats.js"></script>
+  <script src="js/screens/dialogs.js"></script>
+  <script src="js/screens/extras.js"></script>
+  <script src="js/screens/system.js"></script>
+  <script src="js/screens/catalog.js"></script>
+  <script>
+    // ---------- designer shell wiring ----------
+    const qs = new URLSearchParams(location.search);
+    if (qs.has("bare")) document.body.classList.add("bare");
+    const screenEl = document.getElementById("screen");
+    function applyShell() {
+      const theme = qs.get("theme") || App.get("shell.theme", "dark");
+      const eink = (qs.get("eink") ?? (App.get("shell.eink", false) ? "1" : "")) === "1";
+      const size = qs.get("size") || App.get("shell.size", "600x800");
+      screenEl.className = "ko-screen theme-" + theme;
+      document.body.classList.toggle("eink", eink);
+      document.body.classList.toggle("shell-light", theme === "paper");
+      const [w, h] = size.split("x");
+      screenEl.style.setProperty("--dw", w + "px"); screenEl.style.setProperty("--dh", h + "px");
+      document.querySelectorAll("#ctl-theme button").forEach(b => b.classList.toggle("on", b.dataset.v === theme));
+      document.querySelectorAll("#ctl-eink button").forEach(b => b.classList.toggle("on", (b.dataset.v === "eink") === eink));
+      document.querySelectorAll("#ctl-size button").forEach(b => b.classList.toggle("on", b.dataset.v === size));
+    }
+    App.setTheme = (t) => { App.set("shell.theme", t); qs.delete("theme"); applyShell(); App.refresh(); };
+    document.getElementById("ctl-theme").onclick = e => { const v = e.target.dataset.v; if (v) App.setTheme(v); };
+    document.getElementById("ctl-eink").onclick = e => { const v = e.target.dataset.v; if (v) { App.set("shell.eink", v === "eink"); qs.delete("eink"); applyShell(); } };
+    document.getElementById("ctl-size").onclick = e => { const v = e.target.dataset.v; if (v) { App.set("shell.size", v); qs.delete("size"); applyShell(); App.refresh(); } };
+
+    function buildNav() {
+      const groups = {};
+      App.demos.forEach(d => (groups[d.group] ||= []).push(d));
+      document.getElementById("nav").innerHTML = Object.entries(groups).map(([g, items]) =>
+        `<div class="grp">${g}</div>` + items.map(d => `<a href="${d.hash}">${d.label}</a>`).join("")).join("");
+    }
+    function markNav() {
+      document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === location.hash));
+      document.getElementById("hashline").textContent = location.hash;
+    }
+    document.addEventListener("folio:navigate", markNav);
+    window.addEventListener("hashchange", markNav);
+    applyShell(); buildNav(); App.boot(); markNav();
+  </script>
+</body>
+</html>

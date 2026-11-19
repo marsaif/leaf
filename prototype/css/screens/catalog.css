@@ -1,0 +1,65 @@
+/* ==========================================================================
+   Design system catalog (#/catalog) — layout of the specimen pages only.
+   Every sample is a real component from css/components.css.
+   ========================================================================== */
+.ct-tabs { padding-top: var(--sp-1); }
+.ct-body { padding-bottom: var(--sp-6); }
+.ct-end { height: var(--sp-6); }
+.ct-sec { padding: 0 var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
+.ct-pad { padding: 0 var(--sp-4); }
+.ct-note { margin: 0; font-size: var(--fs-sm); color: var(--text-3); line-height: var(--lh-body); }
+.ct-code { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-3); line-height: 1.4; overflow-wrap: anywhere; }
+code.ct-pad { display: block; margin-top: var(--sp-2); }
+
+/* samples */
+.ct-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+.ct-ex { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.ct-ex.wide { grid-column: 1 / -1; }
+.ct-ex-h { font-size: var(--fs-xs); color: var(--text-2); }
+.ct-ex-v { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); min-width: 0; }
+.ct-ex-v > .ko-progress, .ct-ex-v > .ko-chips, .ct-ex-v > .ko-input, .ct-ex-v > .kb-field, .ct-ex-v > .ko-seg--block { flex: 1 1 100%; }
+.ct-ex-v .kb-field--compact { margin-top: 0; }
+.ct-ex-v .ko-card { flex: 1; }
+.ct-ex-v .ko-section-label { padding: 0; }
+
+/* colour panels: each one is its own .theme-* scope so both themes show side by side */
+.ct-themes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.ct-theme { background: var(--bg); color: var(--text); border: var(--hairline) solid var(--border-strong); border-radius: var(--r-lg); padding: var(--sp-3); min-width: 0; }
+.ct-sub { margin-top: var(--sp-3); }
+.ct-sws { display: grid; grid-template-columns: 1fr; gap: var(--sp-1); margin-top: var(--sp-2); }
+.ct-sw { display: flex; align-items: center; gap: var(--sp-2); font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-2); min-width: 0; }
+.ct-sw i { width: 22px; height: 16px; flex: none; border-radius: var(--r-cover); box-shadow: var(--ring-inset-strong); }
+.ct-hlrow { margin-top: var(--sp-2); padding: var(--sp-2); background: var(--page); color: var(--page-ink); border-radius: var(--r-sm); font-family: var(--font-book); font-size: var(--fs-sm); line-height: 1.8; }
+.eink .ct-hlrow mark.hl.s-lighten { box-shadow: inset 0 calc(-1 * var(--bw-lg)) 0 var(--hl-underline); background: var(--hl-eink); }
+
+/* type, spacing, radii, heights, icons */
+.ct-type { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ct-type-row { display: grid; grid-template-columns: 150px 1fr; align-items: baseline; gap: var(--sp-3); }
+.ct-type-row > span { line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-weights { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); font-size: var(--fs-md); }
+.ct-bars { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ct-bar { display: flex; align-items: center; gap: var(--sp-3); }
+.ct-bar i { display: block; height: 10px; background: var(--accent); border-radius: var(--r-tick); flex: none; }
+.ct-bar i.v { width: 10px; height: auto; }
+.ct-radii { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+.ct-radius { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1h); min-width: 0; }
+.ct-radius i { display: block; width: 64px; height: 44px; background: var(--surface-2); border: var(--hairline) solid var(--border-strong); }
+.ct-icons { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-3); align-items: end; }
+.ct-icon { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1h); }
+.ct-ic .ko-i { width: var(--s); height: var(--s); color: var(--text); }
+
+/* overlays shown inline (static copies of absolutely positioned components) */
+.ct-stage { position: relative; padding: var(--sp-3); background: var(--bg-raised); border: var(--hairline) dashed var(--border-strong); border-radius: var(--r-lg); }
+.ct-stage.ct-flat { padding: 0; overflow: hidden; }
+.ct-static { position: relative !important; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important; transform: none !important; animation: none !important; max-height: none; }
+.ko-dialog.ct-static { width: 100%; }
+.ko-popover.ct-static { width: 260px; }
+.ko-toast.ct-static { display: inline-block; }
+.ct-tools { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 0 var(--sp-2); }
+.ct-cover { width: 64px; }
+.ct-selhost { position: relative; width: 64px; height: 44px; background: var(--surface-2); border-radius: var(--r-md); }
+
+@container (max-width: 520px) {
+  .ct-themes, .ct-grid { grid-template-columns: 1fr; }
+  .ct-radii { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

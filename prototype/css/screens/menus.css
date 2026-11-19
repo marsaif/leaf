@@ -1,0 +1,160 @@
+/* ==========================================================================
+   Folio — Menus & Settings (main-menu drawer, settings app, menu-help)
+   Tokens only. E-ink safe: state never relies on colour alone
+   (toggles move, radios fill, selected rows get weight + border).
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- shared rows */
+.mn-list { padding-bottom: var(--sp-1); }
+.mn-group { margin: 0 var(--sp-3) var(--sp-3); }
+.mn-group[hidden], .mn-row[hidden] { display: none; }
+.mn-row { min-height: var(--row-h); cursor: pointer; user-select: none; }
+.mn-row .label .t { display: inline-flex; align-items: center; gap: var(--sp-1h); line-height: 1.3; }
+.mn-row .label .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mn-row .value { max-width: 42%; }
+.mn-row.is-sub .value, .mn-row.is-leaf .value { color: var(--text-2); }
+.mn-row.is-radio { gap: var(--sp-3); }
+.mn-row.is-radio.on .label .t { font-weight: var(--fw-semibold); }
+.mn-row.dim { color: var(--text-3); }
+.mn-row.dim .ko-toggle, .mn-row.dim .ko-radio, .mn-row.dim .ko-icon-tile { opacity: .45; }
+.mn-row.hl { background: var(--accent-soft); box-shadow: var(--bar-accent); }
+.mn-row .chev { margin-right: -4px; }
+
+/* leading icon tile */
+.mn-star { color: var(--text-3); display: inline-flex; }
+.mn-star .ko-i { width: var(--icon-2xs); height: var(--icon-2xs); fill: currentColor; }
+.mn-step { margin-left: auto; }
+.mn-step button { width: 30px; height: 30px; }
+.mn-step .val { min-width: 54px; font-size: var(--fs-sm); color: var(--text); font-weight: var(--fw-medium); }
+
+.mn-filter { margin: 0 var(--sp-3) var(--sp-3); width: auto; height: 40px; }
+.mn-filter .ko-i { color: var(--text-3); }
+.mn-nores { padding: var(--sp-6); text-align: center; font-size: var(--fs-sm); }
+.mn-empty { padding: var(--sp-8) var(--sp-6); font-size: var(--fs-sm); }
+
+.mn-value { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; margin-left: var(--sp-1h); vertical-align: middle; border-radius: var(--r-pill);
+  background: var(--surface-2); border: var(--hairline) solid var(--border-strong); color: var(--text-2); font: var(--fw-medium) var(--fs-xs) var(--font-ui); letter-spacing: 0; }
+
+/* shortcut card (Reading statistics -> stats, Network -> Wi-Fi ...) */
+.mn-hero { display: flex; align-items: center; gap: var(--sp-3); width: calc(100% - 2 * var(--sp-3)); margin: 0 var(--sp-3) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-3); text-align: left; color: var(--text); }
+.mn-hero .ko-icon-tile { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+.mn-hero .ko-icon-tile .ko-i { color: var(--accent); }
+.mn-hero b { display: block; font-weight: var(--fw-semibold); font-size: var(--fs-md); }
+.mn-hero .grow > span { display: block; font-size: var(--fs-sm); color: var(--text-2); margin-top: var(--sp-half); }
+.mn-hero > .ko-i { color: var(--text-2); }
+
+/* breadcrumbs */
+/* ---------------------------------------------------------------- main-menu sheet
+   Same structure as KOReader's top menu (tabs → items → drill-down), drawn with the shared sheet,
+   sheet header and text tabs. Fixed height so switching tabs doesn't make the sheet jump. */
+.mn-sheet { height: 84%; }
+.mn-sheet.mn-still, .ko-layer:has(.mn-still) > .ko-scrim { animation: none; }
+.mn-tabs { flex: none; overflow-x: auto; scrollbar-width: none; }
+.mn-tabs::-webkit-scrollbar { display: none; }
+.mn-head .mn-title { display: inline; }
+.mn-head .sub .mn-crumbs { display: inline-flex; margin: 0; }
+.mn-head .mn-crumbs button { max-width: 200px; overflow: visible; font-size: var(--fs-sm); flex: none; }
+.mn-body { flex: 1; min-height: 0; padding-top: var(--sp-3); }
+.mn-body .mn-group { background: var(--surface); }
+
+/* drill-down motion (disabled automatically in e-ink preview) */
+.mn-anim-fwd { animation: mn-fwd 220ms var(--ease); }
+.mn-anim-back { animation: mn-back 220ms var(--ease); }
+.mn-anim-tab { animation: ko-fade 180ms var(--ease); }
+@keyframes mn-fwd { from { opacity: 0; transform: translateX(32px) } to { opacity: 1; transform: none } }
+@keyframes mn-back { from { opacity: 0; transform: translateX(-32px) } to { opacity: 1; transform: none } }
+
+/* ---------------------------------------------------------------- menu-help */
+.mn-helpbox { width: min(88%, 440px); max-height: 82%; display: flex; flex-direction: column; }
+.mn-help-head { display: flex; gap: var(--sp-3); align-items: flex-start; margin-bottom: var(--sp-3); }
+.mn-help-head .ko-icon-tile .ko-i { color: var(--accent); }
+.ko-crumbs.static span { white-space: nowrap; }
+.mn-help-text { overflow-y: auto; scrollbar-width: none; min-height: 0; }
+.mn-help-text p { margin: 0 0 var(--sp-3); }
+.mn-help-ctl { margin-top: var(--sp-2); }
+.mn-help-ctl .mn-group { margin: 0; background: var(--surface-2); }
+.mn-help-state { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); color: var(--text-2); margin-top: var(--sp-2); }
+
+/* ---------------------------------------------------------------- settings app */
+.set-view { background: var(--bg); }
+.set-body { padding-bottom: var(--sp-2); }
+.set-body .ko-section-label { padding: var(--sp-5) var(--sp-5) var(--sp-2); }
+.set-end { height: var(--sp-6); }
+.set-hero { flex: none; padding: var(--sp-3) var(--sp-5) var(--sp-1); }
+.set-title { font-size: var(--fs-lg); font-weight: var(--fw-semibold); line-height: 1.25; }
+.set-title.big { font-size: var(--fs-2xl); letter-spacing: -.005em; }
+.set-title.serif { font-family: var(--font-display); font-weight: var(--fw-semibold); }
+.set-desc { color: var(--text-3); font-size: var(--fs-sm); margin: var(--sp-half) 0 0; }
+p.set-desc { padding: 0 var(--sp-5); margin: 0; }
+.set-search { flex: none; padding: var(--sp-3) var(--sp-4) var(--sp-2); }
+.set-head { flex: none; display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-2); min-height: 64px; border-bottom: var(--hairline) solid var(--border); }
+.set-hero .set-title.serif.big { font-size: var(--fs-display); letter-spacing: -.01em; }
+.set-crumbline { display: flex !important; gap: var(--sp-1h); min-width: 0; }
+.set-crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-crumbline .set-more-n { flex: none; }
+
+/* device card + quick tiles */
+.set-device { display: flex; align-items: center; gap: var(--sp-4); margin: var(--sp-3) var(--sp-4) 0; }
+.set-dev-ic { width: 52px; height: 52px; border-radius: var(--r-lg); background: var(--surface-2); border: var(--hairline) solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-2); flex: none; }
+.set-device b { display: block; font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+.set-device .grow > span { display: block; font-size: var(--fs-sm); color: var(--text-3); margin-top: 1px; }
+.set-batt { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+.set-batt .ko-progress { flex: 1; max-width: 160px; }
+.set-batt .num { font-size: var(--fs-xs); color: var(--text-3); }
+.set-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-2); margin: var(--sp-3) var(--sp-4) 0; }
+.set-q { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-half); padding: var(--sp-3); text-align: left; min-height: 84px; }
+.set-q .ko-i { color: var(--text-2); margin-bottom: auto; }
+.set-q .t { font-size: var(--fs-sm); font-weight: var(--fw-medium); margin-top: var(--sp-3); }
+.set-q .v { font-size: var(--fs-xs); color: var(--text-3); }
+.set-q.on .ko-i { color: var(--accent); stroke-width: var(--stroke-strong); }
+.set-q.on .v { color: var(--text-2); font-weight: var(--fw-semibold); }
+
+.set-secs .set-sec { min-height: 62px; }
+.set-secs .ko-row + .ko-row::before, .set-results .ko-row + .ko-row::before, .mn-group .ko-row + .ko-row::before { left: 60px; }
+.mn-group .ko-row.is-radio + .ko-row::before, .mn-group .ko-row:not(:has(.ko-icon-tile)) + .ko-row:not(:has(.ko-icon-tile))::before { left: var(--sp-4); }
+
+/* search results */
+.set-results { margin: 0 var(--sp-4); }
+.set-hit { min-height: 58px; }
+.set-hit mark { background: var(--accent-soft); color: var(--text); border-radius: var(--r-thumb); padding: 0 1px; box-shadow: var(--underline-accent); }
+.set-hit .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-more-n { color: var(--text-2); }
+.set-kind { color: var(--text-3); display: inline-flex; }
+
+/* e-ink panel (Display & E-ink) */
+.set-eink { display: grid; gap: var(--sp-3); margin: 0 var(--sp-4); }
+.set-card { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.set-card-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-2); }
+.set-card-head b { font-weight: var(--fw-semibold); }
+.set-note { font-size: var(--fs-xs); color: var(--text-3); }
+.set-more { display: inline-flex; align-items: center; gap: var(--sp-half); font-size: var(--fs-sm); color: var(--text-2); padding: var(--sp-1h) var(--sp-1) var(--sp-1h) var(--sp-2); border-radius: var(--r-sm); }
+.set-more:hover { background: var(--surface-2); color: var(--text); }
+/* screen-specific: the 16-level e-ink grey ramp (each cell blends page ink into the page by its level --k and contrast --c) */
+.set-ramp { display: grid; grid-template-columns: repeat(16, 1fr); height: 30px; margin-top: var(--sp-3); border-radius: var(--r-sm); overflow: hidden; border: var(--hairline) solid var(--border-strong); }
+.set-ramp i { background: color-mix(in srgb, var(--page-ink) min(100%, calc(var(--k) * var(--c))), var(--page)); }
+/* end screen-specific */
+.set-ramp-cap { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-3); margin-top: var(--sp-1h); }
+.set-field { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-3); }
+.set-field > span { font-size: var(--fs-sm); color: var(--text-2); }
+.set-seg button { min-width: 44px; padding: 7px var(--sp-2h); }
+
+/* settings lists use the same engine; a touch more air on the full page */
+.set-body .mn-group { margin: 0 var(--sp-4) var(--sp-3); }
+.set-body .mn-filter { margin: 0 var(--sp-4) var(--sp-3); }
+.set-body .mn-hero { width: calc(100% - 2 * var(--sp-4)); margin: var(--sp-3) var(--sp-4); }
+.set-body > .mn-list:first-child, .set-body > .mn-hero:first-child { margin-top: var(--sp-4); }
+.set-body > .mn-list:first-child { padding-top: var(--sp-3); }
+
+/* paper theme: icon tiles sit on white cards */
+
+/* E-ink preview: strengthen hairlines; selected states stay legible without colour */
+.eink .mn-row.hl { box-shadow: var(--bar-eink); }
+.set-field > span { white-space: nowrap; }
+.set-field .set-seg { flex: none; }
+
+/* wide screens (landscape / large tablets): keep a readable measure */
+.set-view .set-body, .set-view .set-hero, .set-view .set-search { padding-left: max(0px, calc((100% - 780px) / 2)); padding-right: max(0px, calc((100% - 780px) / 2)); }
+.set-view .set-hero { padding-left: max(var(--sp-5), calc((100% - 780px) / 2 + var(--sp-5))); }
+.set-view .set-search { padding-left: max(var(--sp-4), calc((100% - 780px) / 2 + var(--sp-4))); padding-right: max(var(--sp-4), calc((100% - 780px) / 2 + var(--sp-4))); }
+.set-card .ko-sr { padding: 0; }
