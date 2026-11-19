@@ -8,7 +8,7 @@ def refs(s, n=3):
     more = len(s["koreader_refs"]) - n
     return ", ".join(f"`{x}`" for x in r) + (f" (+{more} more)" if more > 0 else "")
 
-P("# Folio coverage audit: every KOReader surface vs. the prototype")
+P("# Leaf coverage audit: every KOReader surface vs. the prototype")
 P("")
 P(f"Generated {D['generated']} against KOReader {D['koreader_version']} (`$KOREADER_DIR/lib/koreader`), "
   "the Project: Title plugin and the user patches in `~/.config/koreader/`, and the prototype in `js/screens/*.js` + `js/data/menus.js`.")
@@ -23,7 +23,7 @@ P(f"- Grouped them into **{T['total']} surfaces** (trivial variants are one surf
 P("- Added persistent chrome that is drawn, not shown as a widget (footer, dog-ear, flipping indicator, highlights, link box, crop box, page gaps, Project: Title grid/list/title bar/footer).")
 P("- Mapped each surface to the prototype: overlays/screens registered with `App.screen/App.overlay`, states registered with `App.demo`, menu-row links in `App.menuSpecial`, and the generic menu engine for plain `KO_MENUS` rows (not counted as gaps).")
 P("")
-P("Legend: **designed** = a Folio screen/overlay designs it · **generic** = no dedicated design, but a designed Folio component covers it *once the base widget is restyled globally in the port* · **partial** = designed in part, a state or sub-surface is missing · **missing** = nothing covers it. Priority (gaps only): **P1** daily reading/library use, **P2** occasional, **P3** rare/power-user. Kindle = relevant on a touch Kindle (Kindle 11: frontlight, no warmth, no keys, Kindle handles USB itself).")
+P("Legend: **designed** = a Leaf screen/overlay designs it · **generic** = no dedicated design, but a designed Leaf component covers it *once the base widget is restyled globally in the port* · **partial** = designed in part, a state or sub-surface is missing · **missing** = nothing covers it. Priority (gaps only): **P1** daily reading/library use, **P2** occasional, **P3** rare/power-user. Kindle = relevant on a touch Kindle (Kindle 11: frontlight, no warmth, no keys, Kindle handles USB itself).")
 P("")
 P("## Totals")
 P("")
@@ -44,7 +44,7 @@ P("")
 gaps = [s for s in S if s["status"] in ("missing", "partial")]
 P("## Gaps (missing and partial), by priority")
 P("")
-P("Each line: id · what · KOReader file:line · trigger · widget · design suggestion (Folio component/pattern to use).")
+P("Each line: id · what · KOReader file:line · trigger · widget · design suggestion (Leaf component/pattern to use).")
 P("")
 for pr in ("P1", "P2", "P3"):
     g = [s for s in gaps if s["priority"] == pr and s["kindle_relevant"]]
@@ -54,7 +54,7 @@ for pr in ("P1", "P2", "P3"):
     P("")
     for s in g:
         st = "partial" if s["status"] == "partial" else "missing"
-        have = f" Folio today: {s['folio']}." if s["folio"] else ""
+        have = f" Leaf today: {s['leaf']}." if s["leaf"] else ""
         n = s.get("all_sites_of_this_widget_type")
         P(f"- **{s['title']}** (`{s['id']}`, {st}{f', {n} construction sites of this type' if n else ''})  ")
         P(f"  KOReader: {refs(s)} · Trigger: {s['trigger']} · Widget: {s['widget']}.{have}  ")
@@ -72,23 +72,23 @@ P("## Surfaces covered only by a generic component")
 P("")
 P("These have no dedicated design. They stay in the old look unless the base widget in the right-hand column is restyled globally (see the safety net below).")
 P("")
-P("| Surface | Base widget(s) | Folio component to mirror |")
+P("| Surface | Base widget(s) | Leaf component to mirror |")
 P("|---|---|---|")
 for s in S:
     if s["status"] == "generic":
-        P(f"| {s['title']} (`{s['id']}`) | {s['widget']} | {s['folio']} |")
+        P(f"| {s['title']} (`{s['id']}`) | {s['widget']} | {s['leaf']} |")
 P("")
 
 P("## Global safety net (restyle these base widgets in the Lua port)")
 P("")
-P("Restyling each of these once gives the Folio look to every use, including surfaces never designed individually. Counts are construction sites found in KOReader + plugins + Project: Title (direct `:new`/`notify` calls; subclasses inherit on top).")
+P("Restyling each of these once gives the Leaf look to every use, including surfaces never designed individually. Counts are construction sites found in KOReader + plugins + Project: Title (direct `:new`/`notify` calls; subclasses inherit on top).")
 P("")
-P("| # | Base widget / global (file) | Sites | Inherited by / used inside | Folio target | Status of the Folio design |")
+P("| # | Base widget / global (file) | Sites | Inherited by / used inside | Leaf target | Status of the Leaf design |")
 P("|---:|---|---:|---|---|---|")
 rows = [
  ("Font map & sizes (`frontend/ui/font.lua` `Font.fontmap`, `Font.sizemap`)", "all", "every TextWidget/TextBoxWidget in every widget", "Inter (UI), Playfair Display (top-level titles), Literata (book), Noto Naskh Arabic; type scale tokens 10.5–30", "designed (tokens.css); existing patch `2-font-override.lua` swaps to Source Sans: replace it"),
- ("Sizes (`frontend/ui/size.lua`: radius, border, padding, margin, line, item heights)", "all", "every FrameContainer, separators, menu rows", "radius tokens, hairline borders, 48px rows, 44px popover rows, 40px buttons", "designed; `2-clean-menus.lua` sets `Size.radius.window = 0`: conflicts with Folio's rounded sheets/dialogs, revise"),
- ("Colours (`Blitbuffer.COLOR_*` greys) + night mode", "all", "frames, separators, greyed text, highlight greys", "map to tokens; Folio Dark on e-ink = KOReader night mode (whole-screen inversion of the Paper theme), so design Paper first and check the inverted result", "designed (tokens) — inversion behaviour must be checked"),
+ ("Sizes (`frontend/ui/size.lua`: radius, border, padding, margin, line, item heights)", "all", "every FrameContainer, separators, menu rows", "radius tokens, hairline borders, 48px rows, 44px popover rows, 40px buttons", "designed; `2-clean-menus.lua` sets `Size.radius.window = 0`: conflicts with Leaf's rounded sheets/dialogs, revise"),
+ ("Colours (`Blitbuffer.COLOR_*` greys) + night mode", "all", "frames, separators, greyed text, highlight greys", "map to tokens; Leaf Dark on e-ink = KOReader night mode (whole-screen inversion of the Paper theme), so design Paper first and check the inverted result", "designed (tokens) — inversion behaviour must be checked"),
  ("Icons (`frontend/ui/widget/iconwidget.lua`: user icons dir `koreader/icons/` is searched before `resources/icons/mdlight`)", "all", "title bars, menus, top-menu tabs, footer, dialogs, file browser", "drop Lucide SVGs named like the mdlight files (appbar.*, chevron.*, star.*, …) into `koreader/icons/`", "designed (Lucide set); zero-code global win"),
  ("Button / ButtonTable / IconButton (`ui/widget/button.lua`, `buttontable.lua`, `iconbutton.lua`)", str(W.get('Button', 87)) + "+", "ButtonDialog, ConfirmBox, MultiConfirmBox, InputDialog, Spin/DoubleSpin/DateTime, TextViewer, ImageViewer, KeyboardLayoutDialog, RadioButtonWidget, FontChooser, crop dialog, DictQuickLookup, BookStatusWidget, KeyValuePage, Menu, TouchMenu, SkimTo, SortWidget, CalendarView, FrontLightWidget", "`.ko-btn`/`.dl-btn` 40px: ghost secondary, small accent primary, danger; actions right-aligned, no grid lines", "designed"),
  ("TitleBar (`ui/widget/titlebar.lua`)", "28", "Menu, KeyValuePage, TextViewer, SortWidget, InputDialog, Spin/DoubleSpin/DateTime, BookMap, PageBrowser, ImageViewer, CalendarView, ReaderProgress, FileManager, BookStatusWidget, DictQuickLookup, FontChooser, FrontLight/NaturalLight, RadioButtonWidget, KeyboardLayoutDialog", "`.ko-header` (screens: back, title, actions) / `.ko-sheet-head` (17px semibold + sub + close right) / `.dl-title`", "designed"),
@@ -118,7 +118,7 @@ for i, r in enumerate(rows, 1):
 P("")
 P("### Widgets that draw themselves (a global restyle does NOT reach them; port each one)")
 P("")
-P("They only partly inherit (buttons, title bars, fonts, icons) and need their own Lua work against the named Folio design:")
+P("They only partly inherit (buttons, title bars, fonts, icons) and need their own Lua work against the named Leaf design:")
 P("")
 selfdrawn = [
  ("ReaderFooter (`frontend/apps/reader/modules/readerfooter.lua`)", "`.rd-foot` + footer modes (gap rd.footer.modes)"),
@@ -141,8 +141,8 @@ for a, b in selfdrawn:
 P("")
 P("## Notes for the port")
 P("")
-P("- **Night mode vs. Dark theme:** KOReader night mode inverts the whole framebuffer. On e-ink, Folio's Dark theme will in practice be the inverted Paper theme; check every Paper design inverted, including covers and highlight greys (inverted images are re-inverted by KOReader only for some content).")
-P("- **Existing user patches overlap the port:** `2-clean-menus.lua` (square corners, non-bold buttons, TouchMenu sizes), `2-menu-panel.lua`, `2-library-panel.lua`, `2-dialogs.lua`, `2-font-override.lua` (Source Sans) and `2-paragraph-translate.lua` (TextViewer translation). Replace or merge them, otherwise two styles fight (e.g. radius 0 vs. Folio's rounded sheets).")
+P("- **Night mode vs. Dark theme:** KOReader night mode inverts the whole framebuffer. On e-ink, Leaf's Dark theme will in practice be the inverted Paper theme; check every Paper design inverted, including covers and highlight greys (inverted images are re-inverted by KOReader only for some content).")
+P("- **Existing user patches overlap the port:** `2-clean-menus.lua` (square corners, non-bold buttons, TouchMenu sizes), `2-menu-panel.lua`, `2-library-panel.lua`, `2-dialogs.lua`, `2-font-override.lua` (Source Sans) and `2-paragraph-translate.lua` (TextViewer translation). Replace or merge them, otherwise two styles fight (e.g. radius 0 vs. Leaf's rounded sheets).")
 P("- **Kindle native pieces cannot be restyled from Lua:** the Kindle activity spinner (`readeractivityindicator.lua`, uses lipc) and the Kindle lock/ads screen when the device still has special offers (KOReader's sleep screen only shows if `supportsScreensaver`).")
 P("- **Disable the stock Cover browser plugin** (Project: Title replaces it) so its mosaic/list and its spinner dialogs never appear.")
 P("- **One-time / first-run surfaces** to test on a clean profile: quickstart guide, 'Gestures have been upgraded' (`plugins/gestures.koplugin/main.lua:1310`), first multiswipe prompt (`:1334`), 'Restore metadata from archive?' (`frontend/apps/reader/readerui.lua:649`), Project: Title first indexing progress, 'No dictionaries installed' dictionary state.")

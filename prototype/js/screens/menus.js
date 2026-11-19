@@ -1,8 +1,8 @@
 /* ==========================================================================
-   Folio — Menus & Settings (owned by the Menus agent)
+   Leaf — Menus & Settings (owned by the Menus agent)
 
    One menu engine renders any node list from KO_MENUS (the real KOReader
-   option trees) in the Folio design. It powers:
+   option trees) in the Leaf design. It powers:
      overlay "main-menu"  {ctx:"fm"|"reader"|"reader-pdf", tab, path:[i,j,..]}
      screen  "settings"   {section, path:[sourceIdx, i, j, ..], hl, q, find}
      overlay "menu-help"  {ctx, tab, path, i}  or  {section, path, i}
@@ -54,7 +54,7 @@
     "Panel zoom (manga/comic)": "Zoom into comic panels",
   };
   const parseCache = new WeakMap();
-  /** KOReader uses lowercase choice labels ("name", "last read date"); Folio capitalises them */
+  /** KOReader uses lowercase choice labels ("name", "last read date"); Leaf capitalises them */
   const cap = (s) => (/^[a-z][a-z' ]*(\(|$|[ -])/.test(s) && !/\.[a-z]/.test(s) ? s[0].toUpperCase() + s.slice(1) : s);
   /** "Sort by: name" -> {label:"Sort by", value:"name"}; gestures "Top left   (Pass through)" -> value */
   function parse(n) {
@@ -165,7 +165,7 @@
     tools: { title: "Tools & plugins", icon: "wrench", desc: "Statistics, sync, Calibre, Wallabag, plugins",
       sources: [S_("reader", "appbar.tools", [], { title: "While reading" }), S_("fm", "appbar.tools", [], { title: "In the library" }), S_("reader-pdf", "appbar.tools", [], { title: "With a PDF open" })] },
     help: { title: "Help & about", icon: "life-buoy", desc: "Guides, bug reports, version, exit",
-      sources: [S_("fm", "appbar.menu", [], { except: ["History", "Favorites", "Collections", "Bookmark browser"], title: "Folio" }), S_("reader", "appbar.menu", [], { only: ["Help", "Exit"], title: "While reading" })] },
+      sources: [S_("fm", "appbar.menu", [], { except: ["History", "Favorites", "Collections", "Bookmark browser"], title: "Leaf" }), S_("reader", "appbar.menu", [], { only: ["Help", "Exit"], title: "While reading" })] },
   };
   const CLUSTERS = [
     ["Reading", ["reading", "typography", "gestures", "search"]],
@@ -293,8 +293,8 @@
   const open = (name, params) => () => { App.closeAll(); App.open(name, params || {}); };
   const SPECIAL = {
     "open last document": go("reader", { id: "animal-farm" }), "open previous document": go("reader", { id: "animal-farm" }),
-    exit: () => App.open("confirm", { title: "Exit Folio?", body: "Your reading position is saved. You can reopen the last book from the home screen.", ok: "Exit", danger: true }),
-    "restart koreader": () => App.open("confirm", { title: "Restart Folio?", body: "The app restarts and reopens where you left off.", ok: "Restart" }),
+    exit: () => App.open("confirm", { title: "Exit Leaf?", body: "Your reading position is saved. You can reopen the last book from the home screen.", ok: "Exit", danger: true }),
+    "restart koreader": () => App.open("confirm", { title: "Restart Leaf?", body: "The app restarts and reopens where you left off.", ok: "Restart" }),
     "network info": () => App.open("wifi"),
     "table of contents": inReader("toc"), bookmarks: inReader("bookmarks"), "go to page": inReader("goto"), "skim document": inReader("skim"),
     "book map": inReader("bookmap"), "page browser": inReader("pagebrowser"), "bookmark browser": inReader("annotations"),
@@ -402,7 +402,7 @@
   App.action("mnLeaf", (el) => {
     const { n, key } = nodeAt(el); if (!n) return;
     const p = parse(n);
-    const sp = special(p.label, n);   // Folio links (dictionary manager, version → update…) win over KOReader's state
+    const sp = special(p.label, n);   // Leaf links (dictionary manager, version → update…) win over KOReader's state
     if (sp) return sp.fn();
     if (n.disabled) return App.toast(`“${p.label}” is unavailable right now`);
     const v = ST.has(key + "#v") ? ST.get(key + "#v") : p.value;
@@ -627,7 +627,7 @@
       return `<button class="ko-row set-sec" data-go="settings" data-params='{"section":"${k}"}'><span class="ko-icon-tile ko-icon-tile--lg">${icon(s.icon)}</span><span class="label"><span class="t">${s.title}</span><span class="sub">${s.desc}</span></span>${icon("chevron-right", "chev sm")}</button>`;
     }).join("")}</div>`).join("");
     const quick = (ic, l, v, attrs, on) => `<button class="ko-card set-q ${on ? "on" : ""}" ${attrs}>${icon(ic)}<span class="t">${l}</span><span class="v">${v}</span></button>`;
-    const home = `<div class="set-device ko-card"><div class="set-dev-ic">${icon("tablet-smartphone", "lg")}</div><div class="grow"><b>Kindle Paperwhite</b><span>Folio on KOReader 2026.07.1</span><div class="set-batt">${App.progress(87, "ko-progress--thin")}<span class="num">87% · 3.1 GB free</span></div></div><button class="ko-btn ko-btn--ghost" data-open="about">About</button></div>
+    const home = `<div class="set-device ko-card"><div class="set-dev-ic">${icon("tablet-smartphone", "lg")}</div><div class="grow"><b>Kindle Paperwhite</b><span>Leaf on KOReader 2026.07.1</span><div class="set-batt">${App.progress(87, "ko-progress--thin")}<span class="num">87% · 3.1 GB free</span></div></div><button class="ko-btn ko-btn--ghost" data-open="about">About</button></div>
       <div class="set-quick">${quick("moon", "Night mode", themeIsDark() ? "On" : "Off", 'data-action="stNight"', themeIsDark())}${quick("wifi", "Wi-Fi", "Home", 'data-open="wifi"', true)}${quick("sun", "Frontlight", fl() + "%", 'data-open="frontlight"', fl() > 0)}${quick("moon-star", "Sleep screen", "Cover", 'data-open="sleep"', false)}</div>${cards}`;
     return `<div class="ko-view set-view set-home">${App.statusBar({ left: "Settings" })}
       <header class="set-hero"><div class="set-title serif big">Settings</div><div class="set-desc">Every KOReader option, organised.</div></header>

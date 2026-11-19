@@ -214,7 +214,7 @@
      ===================================================================== */
   // remember where search/stats were opened from so "back" returns there
   let prev = { name: "home", params: {} };
-  document.addEventListener("folio:navigate", () => {
+  document.addEventListener("leaf:navigate", () => {
     const c = App.current;
     if (c.name !== "search" && c.name !== "stats") prev = { name: c.name, params: c.params };
   });

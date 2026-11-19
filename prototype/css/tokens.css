@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Folio — design tokens for the KOReader redesign.
+   Leaf — design tokens for the KOReader redesign.
    Two themes: "dark" (default, matches the concept) and "paper" (light, e-ink friendly),
    plus the "eink" preview modifier. Everything in the UI uses these variables: screen CSS
    never contains raw colours, px font sizes, font families/weights, radii or shadows

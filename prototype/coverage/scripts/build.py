@@ -24,7 +24,7 @@ sites = [x for x in raw if x["widget"] != "UIManager:show"]
 shows = [x for x in raw if x["widget"] == "UIManager:show"]
 
 surfaces, bad = [], []
-for (sid, area, title, refs, widget, trigger, example, cat, st, folio, kindle, prio, sugg) in E:
+for (sid, area, title, refs, widget, trigger, example, cat, st, leaf, kindle, prio, sugg) in E:
     rl = [expand(r.strip()) for r in refs.split(",") if r.strip()]
     for r in rl:
         f, _, ln = r.rpartition(":")
@@ -37,7 +37,7 @@ for (sid, area, title, refs, widget, trigger, example, cat, st, folio, kindle, p
                 bad.append((sid, r, "line"))
     surfaces.append({
         "id": sid, "area": area, "title": title, "koreader_refs": rl, "widget": widget, "trigger": trigger,
-        "example": example, "category": cat, "status": STATUS[st], "folio": folio, "kindle_relevant": kindle,
+        "example": example, "category": cat, "status": STATUS[st], "leaf": leaf, "kindle_relevant": kindle,
         "priority": prio if st in ("M", "P") else None, "suggestion": sugg, "site_count": 0,
     })
 if bad:
@@ -99,10 +99,10 @@ out = {
     "koreader_version": "v2026.07.1",
     "sources": ["$KOREADER_DIR/lib/koreader/frontend", "$KOREADER_DIR/lib/koreader/plugins",
                 "~/.config/koreader/plugins/projecttitle.koplugin", "~/.config/koreader/patches", "./js/screens/*.js"],
-    "legend": {"designed": "a Folio screen/overlay designs this surface (see folio + demo)",
-               "generic": "no dedicated design, but a designed Folio component covers it once the KOReader base widget is restyled globally",
+    "legend": {"designed": "a Leaf screen/overlay designs this surface (see leaf + demo)",
+               "generic": "no dedicated design, but a designed Leaf component covers it once the KOReader base widget is restyled globally",
                "partial": "designed in part; a state or sub-surface is missing",
-               "missing": "nothing in Folio covers it",
+               "missing": "nothing in Leaf covers it",
                "priority": "P1 daily reading/library use, P2 occasional, P3 rare/power-user (gaps only)"},
     "totals": tot,
     "summary_by_area": summary,

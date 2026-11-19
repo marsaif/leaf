@@ -26,7 +26,7 @@ async def main(a):
         if a.match: demos = [d for d in demos if a.match.lower() in (d["label"] + d["hash"]).lower()]
         shots = []
         for d in demos:
-            await page.evaluate("""async (h) => { localStorage.removeItem('folio.store'); App.store = {}; document.querySelectorAll('.ko-toast').forEach(t => t.remove());
+            await page.evaluate("""async (h) => { localStorage.removeItem('leaf.store'); App.store = {}; document.querySelectorAll('.ko-toast').forEach(t => t.remove());
               history.replaceState(null,'',h); App.fromHash(); App.render(); await document.fonts.ready;
               await new Promise(r => setTimeout(r, 60)); }""", d["hash"])
             png = await page.locator("#screen").screenshot()

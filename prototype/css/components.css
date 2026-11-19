@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Folio — the component library. One class per component, `--modifier` classes
+   Leaf — the component library. One class per component, `--modifier` classes
    for real variants, state classes `.on` (selected), `.sel` (row selected),
    `.disabled` / `:disabled`. Token values only (css/tokens.css).
    HTML helpers that produce this markup: js/ui.js (UI.button, UI.row, ...).

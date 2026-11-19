@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Folio — Reader (owned by the Reader agent)
+   Leaf — Reader (owned by the Reader agent)
    - window.RD: book model, Arabic text, typesetting config, pagination engine
    - screen  `reader`        ({id, page, ch, y})
    - overlay `reader-chrome` (centre tap)
@@ -552,7 +552,7 @@
     if (e.key === "Enter" || e.key === "m") App.open("reader-chrome", {});
   });
   // the page shows the selection of the top overlay (hl-popup, dict, translate…): redraw it when that changes
-  document.addEventListener("folio:navigate", () => {
+  document.addEventListener("leaf:navigate", () => {
     if (App.current.name !== "reader" || RD._redrawing) return;
     const L = RD.layout(RD.cur().id); if (!L) return;
     if (JSON.stringify(selFromStack(L)) === RD.selSig) return;

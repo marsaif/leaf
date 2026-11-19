@@ -1,4 +1,4 @@
-# Folio coverage audit: every KOReader surface vs. the prototype
+# Leaf coverage audit: every KOReader surface vs. the prototype
 
 Generated 2026-11-19 against KOReader v2026.07.1 (`$KOREADER_DIR/lib/koreader`), the Project: Title plugin and the user patches in `~/.config/koreader/`, and the prototype in `js/screens/*.js` + `js/data/menus.js`.
 
@@ -11,7 +11,7 @@ Generated 2026-11-19 against KOReader v2026.07.1 (`$KOREADER_DIR/lib/koreader`),
 - Added persistent chrome that is drawn, not shown as a widget (footer, dog-ear, flipping indicator, highlights, link box, crop box, page gaps, Project: Title grid/list/title bar/footer).
 - Mapped each surface to the prototype: overlays/screens registered with `App.screen/App.overlay`, states registered with `App.demo`, menu-row links in `App.menuSpecial`, and the generic menu engine for plain `KO_MENUS` rows (not counted as gaps).
 
-Legend: **designed** = a Folio screen/overlay designs it · **generic** = no dedicated design, but a designed Folio component covers it *once the base widget is restyled globally in the port* · **partial** = designed in part, a state or sub-surface is missing · **missing** = nothing covers it. Priority (gaps only): **P1** daily reading/library use, **P2** occasional, **P3** rare/power-user. Kindle = relevant on a touch Kindle (Kindle 11: frontlight, no warmth, no keys, Kindle handles USB itself).
+Legend: **designed** = a Leaf screen/overlay designs it · **generic** = no dedicated design, but a designed Leaf component covers it *once the base widget is restyled globally in the port* · **partial** = designed in part, a state or sub-surface is missing · **missing** = nothing covers it. Priority (gaps only): **P1** daily reading/library use, **P2** occasional, **P3** rare/power-user. Kindle = relevant on a touch Kindle (Kindle 11: frontlight, no warmth, no keys, Kindle handles USB itself).
 
 ## Totals
 
@@ -40,12 +40,12 @@ Note: the 'Base widgets' row counts widget *types*. Its gaps are the most import
 
 ## Gaps (missing and partial), by priority
 
-Each line: id · what · KOReader file:line · trigger · widget · design suggestion (Folio component/pattern to use).
+Each line: id · what · KOReader file:line · trigger · widget · design suggestion (Leaf component/pattern to use).
 
 ### P1 (4 Kindle-relevant)
 
 - **Footer mode cycling (tap footer) & hidden footer** (`rd.footer.modes`, partial)  
-  KOReader: `frontend/apps/reader/modules/readerfooter.lua:2423`, `frontend/apps/reader/modules/readerfooter.lua:2485` · Trigger: tap the footer · Widget: ReaderFooter. Folio today: only one footer layout is shown.  
+  KOReader: `frontend/apps/reader/modules/readerfooter.lua:2423`, `frontend/apps/reader/modules/readerfooter.lua:2485` · Trigger: tap the footer · Widget: ReaderFooter. Leaf today: only one footer layout is shown.  
   Design: Define each single-item mode and the progress-bar-only/hidden state with the same `.rd-foot` typography; cycle on tap.
 - **Page-flipping mode (indicator icon + flipping behaviour) and re-rendering indicator** (`rd.flipping`, missing)  
   KOReader: `frontend/apps/reader/modules/readerflipping.lua:17`, `frontend/apps/reader/modules/readerflipping.lua:58` · Trigger: tap top-left corner (default gesture!), or CRE background re-render after a font change · Widget: ReaderFlipping.  
@@ -54,7 +54,7 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/apps/reader/modules/readerlink.lua:1584`, `frontend/apps/reader/modules/readerlink.lua:373`, `frontend/apps/reader/modules/readerlink.lua:396` · Trigger: tap a footnote link · Widget: FootnoteWidget (+ font-size SpinWidgets).  
   Design: Bottom `.ko-sheet` (no grip) with the note in Literata at reading size, hairline top border, link 'Open in book' and close; e-ink safe.
 - **Dictionary popup states: no results / no dictionaries / interrupted** (`dc.empty`, missing)  
-  KOReader: `frontend/apps/reader/modules/readerdictionary.lua:1383`, `frontend/apps/reader/modules/readerdictionary.lua:1411`, `frontend/apps/reader/modules/readerdictionary.lua:1618` (+1 more) · Trigger: lookup of a name/unknown word; fresh install · Widget: DictQuickLookup state + InputDialog. Folio today: dict demo always has a definition.  
+  KOReader: `frontend/apps/reader/modules/readerdictionary.lua:1383`, `frontend/apps/reader/modules/readerdictionary.lua:1411`, `frontend/apps/reader/modules/readerdictionary.lua:1618` (+1 more) · Trigger: lookup of a name/unknown word; fresh install · Widget: DictQuickLookup state + InputDialog. Leaf today: dict demo always has a definition.  
   Design: Same `dict` sheet with `.ko-empty` body: 'No definition for “X”' + actions Edit word, Wikipedia, Translate; no-dictionary state links to `dict-manager` catalog.
 
 ### P2 (20 Kindle-relevant)
@@ -66,10 +66,10 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/ui/widget/doublespinwidget.lua:1` · Trigger: 13 sites: mosaic columns×rows, battery thresholds, refresh, hyphenation limits, info-list items, location lat/long · Widget: DoubleSpinWidget.  
   Design: Same dialog as the SpinWidget design with two App.sliderRow lines (left/right labels).
 - **Date / time picker** (`w.datetimewidget`, partial, 12 construction sites of this type)  
-  KOReader: `frontend/ui/widget/datetimewidget.lua:8`, `frontend/ui/widget/datetimewidget.lua:24`, `frontend/ui/widget/datetimewidget.lua:40` · Trigger: 12 sites: read timer alarm, autoturn, autosuspend, profiles schedule, autowarmth, stats day start, set clock · Widget: DateTimeWidget. Folio today: `read-timer` sheet uses Hour/Minute stepper rows.  
+  KOReader: `frontend/ui/widget/datetimewidget.lua:8`, `frontend/ui/widget/datetimewidget.lua:24`, `frontend/ui/widget/datetimewidget.lua:40` · Trigger: 12 sites: read timer alarm, autoturn, autosuspend, profiles schedule, autowarmth, stats day start, set clock · Widget: DateTimeWidget. Leaf today: `read-timer` sheet uses Hour/Minute stepper rows.  
   Design: Generic dialog with Hour / Minute (and Y/M/D) stepper columns like read-timer's rows; Cancel · Set.
 - **Sort / arrange list (move up/down, drag)** (`w.sortwidget`, partial, 10 construction sites of this type)  
-  KOReader: `frontend/ui/widget/sortwidget.lua:432`, `frontend/ui/widget/sortwidget.lua:553` · Trigger: 9 sites: arrange collections, books in collection, status bar items, dispatcher actions, dictionaries, vocabulary book filter, cloud servers · Widget: SortWidget. Folio today: dict-manager order list (Dictionaries · Arabic books order) is the only designed arrange list.  
+  KOReader: `frontend/ui/widget/sortwidget.lua:432`, `frontend/ui/widget/sortwidget.lua:553` · Trigger: 9 sites: arrange collections, books in collection, status bar items, dispatcher actions, dictionaries, vocabulary book filter, cloud servers · Widget: SortWidget. Leaf today: dict-manager order list (Dictionaries · Arabic books order) is the only designed arrange list.  
   Design: Generic 'Arrange' page: rows with a drag handle and up/down steppers, footer Cancel · Save; its overflow ButtonDialog (move to top/bottom) → action sheet.
 - **Folder / file chooser** (`w.pathchooser`, missing, 20 construction sites of this type)  
   KOReader: `frontend/ui/widget/pathchooser.lua:128`, `frontend/ui/widget/pathchooser.lua:157`, `frontend/ui/downloadmgr.lua:48` · Trigger: 20 sites: set HOME folder, download folder, screensaver folder, custom cover, collections folder, cloud, text editor open · Widget: PathChooser (FileChooser subclass).  
@@ -81,10 +81,10 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/ui/widget/virtualkeyboard.lua:107`, `frontend/ui/widget/virtualkeyboard.lua:181` · Trigger: long-press a key · Widget: VirtualKeyPopup.  
   Design: Small `.ko-popover` above the key with 44px cells, accent outline on the hovered character.
 - **Book cover viewer** (`bi.cover`, missing)  
-  KOReader: `frontend/apps/filemanager/filemanagerbookinfo.lua:448`, `frontend/apps/filemanager/filemanagerbookinfo.lua:455` · Trigger: tap the cover in book info · Widget: ImageViewer. Folio today: only an `info` text card.  
+  KOReader: `frontend/apps/filemanager/filemanagerbookinfo.lua:448`, `frontend/apps/filemanager/filemanagerbookinfo.lua:455` · Trigger: tap the cover in book info · Widget: ImageViewer. Leaf today: only an `info` text card.  
   Design: ImageViewer design (full-bleed cover, close/rotate/save).
 - **Manual PDF crop (bounding-box editor)** (`rd.crop`, missing)  
-  KOReader: `frontend/apps/reader/modules/readercropping.lua:98`, `frontend/apps/reader/modules/readercropping.lua:108` · Trigger: PDF typeset › Crop › Manual · Widget: BBoxWidget + ButtonTable. Folio today: typeset Crop tab shows auto-crop margins only.  
+  KOReader: `frontend/apps/reader/modules/readercropping.lua:98`, `frontend/apps/reader/modules/readercropping.lua:108` · Trigger: PDF typeset › Crop › Manual · Widget: BBoxWidget + ButtonTable. Leaf today: typeset Crop tab shows auto-crop margins only.  
   Design: Full page with four accent corner handles, dimmed outside area (solid, not gradient), bottom bar: Cancel · Reset · Apply.
 - **Image in book viewer** (`rd.image`, missing)  
   KOReader: `frontend/ui/widget/textboxwidget.lua:2379`, `frontend/apps/reader/modules/readerhighlight.lua:1625`, `frontend/apps/reader/modules/readerhighlight.lua:1666` · Trigger: long-press an illustration · Widget: ImageViewer.  
@@ -96,7 +96,7 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/apps/reader/modules/readerlink.lua:980` · Trigger: tap an http link · Widget: ButtonDialog.  
   Design: Action sheet with the URL as `.ko-sheet-head .sub`.
 - **Bookmark item long-press / tap actions** (`rd.bookmarks.longpress`, partial)  
-  KOReader: `frontend/apps/reader/modules/readerbookmark.lua:1062` · Trigger: long-press an item in the list · Widget: ButtonDialog. Folio today: rows have only a trash icon; annotation tap → hl-popup.  
+  KOReader: `frontend/apps/reader/modules/readerbookmark.lua:1062` · Trigger: long-press an item in the list · Widget: ButtonDialog. Leaf today: rows have only a trash icon; annotation tap → hl-popup.  
   Design: Action sheet headed by the snippet: Go to, Edit note, Edit text, Remove, Select…; same for annotations rows.
 - **In-page search navigation bar (⌛ wait, ◁◁ ◁ ↺ ▷ ▷▷, back to results / original page)** (`rd.search.nav`, missing)  
   KOReader: `frontend/apps/reader/modules/readersearch.lua:525`, `frontend/apps/reader/modules/readersearch.lua:545`, `frontend/apps/reader/modules/readersearch.lua:866` (+1 more) · Trigger: after jumping to a search hit · Widget: ButtonDialog (small, bottom).  
@@ -105,19 +105,19 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/dispatcher.lua:1446` · Trigger: a gesture set to 'Show as quick menu' · Widget: ButtonDialog.  
   Design: Anchored/bottom `.ko-popover` of icon rows (same as `reader-more`), title = gesture name.
 - **Current book statistics** (`pl.stats.current`, missing)  
-  KOReader: `plugins/statistics.koplugin/main.lua:1262`, `plugins/statistics.koplugin/main.lua:2979` · Trigger: stats › Current book; gesture 'Book statistics' · Widget: KeyValuePage. Folio today: stats-menu › Current book is a toast.  
+  KOReader: `plugins/statistics.koplugin/main.lua:1262`, `plugins/statistics.koplugin/main.lua:2979` · Trigger: stats › Current book; gesture 'Book statistics' · Widget: KeyValuePage. Leaf today: stats-menu › Current book is a toast.  
   Design: Book-details style page with a hero (time read, % done) + KV rows; reachable from reader chrome.
 - **Calendar view (month grid with book bars)** (`pl.stats.calendar`, partial)  
-  KOReader: `plugins/statistics.koplugin/main.lua:2749`, `plugins/statistics.koplugin/calendarview.lua:1226` · Trigger: stats › Calendar view · Widget: CalendarView. Folio today: year heatmap only (`stats?range=year`).  
+  KOReader: `plugins/statistics.koplugin/main.lua:2749`, `plugins/statistics.koplugin/calendarview.lua:1226` · Trigger: stats › Calendar view · Widget: CalendarView. Leaf today: year heatmap only (`stats?range=year`).  
   Design: Month grid page (7 columns, day number + thin per-book bars in `--text-2`, today outlined), swipe months.
 - **Day timeline (hour-by-hour)** (`pl.stats.day`, missing)  
   KOReader: `plugins/statistics.koplugin/calendarview.lua:1453`, `plugins/statistics.koplugin/calendarview.lua:1493` · Trigger: calendar › tap a day; stats › Today's timeline · Widget: CalendarDayView.  
   Design: Vertical 24h timeline with session blocks per book (solid fills, book titles), header with day total.
 - **Read timer (set, running, time's up)** (`pl.readtimer`, partial)  
-  KOReader: `plugins/readtimer.koplugin/main.lua:66`, `plugins/readtimer.koplugin/main.lua:77`, `plugins/readtimer.koplugin/main.lua:95` (+7 more) · Trigger: Tools › Read timer; alarm fires · Widget: DateTimeWidget / ConfirmBox / InfoMessage / Notification. Folio today: `read-timer` sheet (set + running); the expiry alert itself not designed.  
+  KOReader: `plugins/readtimer.koplugin/main.lua:66`, `plugins/readtimer.koplugin/main.lua:77`, `plugins/readtimer.koplugin/main.lua:95` (+7 more) · Trigger: Tools › Read timer; alarm fires · Widget: DateTimeWidget / ConfirmBox / InfoMessage / Notification. Leaf today: `read-timer` sheet (set + running); the expiry alert itself not designed.  
   Design: Expiry: `confirm`-style dialog with the timer message, actions 'Repeat 20 min' (primary) · Close.
 - **Project: Title grid/list size dialogs** (`pt.spins`, partial)  
-  KOReader: `~/.config/koreader/plugins/projecttitle.koplugin/main.lua:462`, `~/.config/koreader/plugins/projecttitle.koplugin/main.lua:510`, `~/.config/koreader/plugins/projecttitle.koplugin/main.lua:560` · Trigger: settings › Items per page · Widget: DoubleSpinWidget / SpinWidget. Folio today: View sheet · grid & list settings shows inline steppers.  
+  KOReader: `~/.config/koreader/plugins/projecttitle.koplugin/main.lua:462`, `~/.config/koreader/plugins/projecttitle.koplugin/main.lua:510`, `~/.config/koreader/plugins/projecttitle.koplugin/main.lua:560` · Trigger: settings › Items per page · Widget: DoubleSpinWidget / SpinWidget. Leaf today: View sheet · grid & list settings shows inline steppers.  
   Design: Covered once the DoubleSpin/Spin generic exists.
 
 ### P3 (25 Kindle-relevant)
@@ -130,9 +130,9 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   Design: Anchored `.ko-popover` row of actions above the field; snippets as a sheet list.
 - **Scroll bars in scrollable text** (`w.scrollbar`, missing)  
   KOReader: `frontend/ui/widget/verticalscrollbar.lua:1`, `frontend/ui/widget/scrolltextwidget.lua:1`, `frontend/ui/widget/scrollhtmlwidget.lua:1` (+1 more) · Trigger: long InfoMessage/TextViewer/dictionary definitions · Widget: VerticalScrollBar.  
-  Design: Thin 3px `--text-3` track-less bar on the right (Folio relies on native scrolling; define one style).
+  Design: Thin 3px `--text-3` track-less bar on the right (Leaf relies on native scrolling; define one style).
 - **Open with… dialog** (`w.openwith`, missing, 1 construction sites of this type)  
-  KOReader: `frontend/apps/filemanager/filemanager.lua:1606`, `frontend/apps/filemanager/filemanager.lua:1578`, `frontend/apps/filemanager/filemanager.lua:1588` · Trigger: book long-press › Open with… · Widget: OpenWithDialog (InputDialog subclass) + ConfirmBox. Folio today: `book-actions` › Open with… is only a toast.  
+  KOReader: `frontend/apps/filemanager/filemanager.lua:1606`, `frontend/apps/filemanager/filemanager.lua:1578`, `frontend/apps/filemanager/filemanager.lua:1588` · Trigger: book long-press › Open with… · Widget: OpenWithDialog (InputDialog subclass) + ConfirmBox. Leaf today: `book-actions` › Open with… is only a toast.  
   Design: Sheet of radio rows (engine names) + two check rows (this file / all .epub) + Open; 'Always open with' confirms → `confirm`.
 - **Show selected files list** (`fm.select.list`, missing)  
   KOReader: `frontend/apps/filemanager/filemanager.lua:1459` · Trigger: select mode › Show selected files list · Widget: BookList.  
@@ -141,19 +141,19 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/apps/filemanager/filemanager.lua:400`, `frontend/apps/reader/readerui.lua:240`, `frontend/ui/widget/screenshoter.lua:90` (+1 more) · Trigger: two-finger diagonal swipe / gesture action · Widget: Screenshoter → ImageViewer + ButtonDialog.  
   Design: Toast 'Screenshot saved' with a 'View' action; viewing uses the ImageViewer design.
 - **Arrange collections / books in collection** (`co.arrange`, partial)  
-  KOReader: `frontend/apps/filemanager/filemanagercollection.lua:779`, `frontend/apps/filemanager/filemanagercollection.lua:793`, `frontend/apps/filemanager/filemanagercollection.lua:1453` · Trigger: collection menu › Arrange / Sort · Widget: SortWidget / ButtonDialog. Folio today: sort radios designed; manual arrange list not.  
+  KOReader: `frontend/apps/filemanager/filemanagercollection.lua:779`, `frontend/apps/filemanager/filemanagercollection.lua:793`, `frontend/apps/filemanager/filemanagercollection.lua:1453` · Trigger: collection menu › Arrange / Sort · Widget: SortWidget / ButtonDialog. Leaf today: sort radios designed; manual arrange list not.  
   Design: Generic Arrange page (see SortWidget).
 - **Collection auto-folders (add folder, file types)** (`co.folders`, partial)  
-  KOReader: `frontend/apps/filemanager/filemanagercollection.lua:1083`, `frontend/apps/filemanager/filemanagercollection.lua:1117`, `frontend/apps/filemanager/filemanagercollection.lua:1139` (+5 more) · Trigger: collection menu › Connect folders · Widget: Menu + PathChooser + InputDialog + ButtonSelector. Folio today: 'Add a folder…' is a toast in `lib-coll-menu`.  
+  KOReader: `frontend/apps/filemanager/filemanagercollection.lua:1083`, `frontend/apps/filemanager/filemanagercollection.lua:1117`, `frontend/apps/filemanager/filemanagercollection.lua:1139` (+5 more) · Trigger: collection menu › Connect folders · Widget: Menu + PathChooser + InputDialog + ButtonSelector. Leaf today: 'Add a folder…' is a toast in `lib-coll-menu`.  
   Design: List page of folders + PathChooser design + `input` for file types.
 - **Edit book metadata / custom cover / reset** (`bi.metadata`, missing)  
-  KOReader: `frontend/apps/filemanager/filemanagerbookinfo.lua:518`, `frontend/apps/filemanager/filemanagerbookinfo.lua:596`, `frontend/apps/filemanager/filemanagerbookinfo.lua:673` (+2 more) · Trigger: book info › hold a field / Set custom cover · Widget: ButtonDialog + InputDialog + PathChooser + ConfirmBox. Folio today: book-details shows Ignore cover / Ignore metadata toggles only.  
+  KOReader: `frontend/apps/filemanager/filemanagerbookinfo.lua:518`, `frontend/apps/filemanager/filemanagerbookinfo.lua:596`, `frontend/apps/filemanager/filemanagerbookinfo.lua:673` (+2 more) · Trigger: book info › hold a field / Set custom cover · Widget: ButtonDialog + InputDialog + PathChooser + ConfirmBox. Leaf today: book-details shows Ignore cover / Ignore metadata toggles only.  
   Design: In book-details: tap a value → action sheet (Edit, Reset, Copy) → `input`; 'Custom cover' row → PathChooser.
 - **Kindle activity indicator (native spinner)** (`rd.activity`, missing)  
   KOReader: `frontend/apps/reader/modules/readeractivityindicator.lua:43` · Trigger: long operations on Kindle · Widget: Kindle lipc spinner.  
-  Design: Native Kindle framework widget, cannot be restyled in Lua; disable it and show a Folio toast instead if desired.
+  Design: Native Kindle framework widget, cannot be restyled in Lua; disable it and show a Leaf toast instead if desired.
 - **Continuous / scroll mode page gaps** (`rd.pagegap`, partial)  
-  KOReader: `frontend/apps/reader/modules/readerview.lua:372`, `frontend/apps/reader/modules/readerview.lua:445`, `frontend/apps/reader/modules/readerscrolling.lua:156` (+1 more) · Trigger: View mode: continuous · Widget: ReaderView / ReaderScrolling. Folio today: PDF continuous designed (page_scroll); EPUB scroll mode not shown.  
+  KOReader: `frontend/apps/reader/modules/readerview.lua:372`, `frontend/apps/reader/modules/readerview.lua:445`, `frontend/apps/reader/modules/readerscrolling.lua:156` (+1 more) · Trigger: View mode: continuous · Widget: ReaderView / ReaderScrolling. Leaf today: PDF continuous designed (page_scroll); EPUB scroll mode not shown.  
   Design: Same page with a hairline/`--page` gap between pages; no chrome change.
 - **Perception expander guide lines** (`rd.perception`, missing)  
   KOReader: `plugins/perceptionexpander.koplugin/main.lua:103`, `plugins/perceptionexpander.koplugin/main.lua:182` · Trigger: plugin enabled · Widget: Widget (lines on page) + MultiInputDialog.  
@@ -168,7 +168,7 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/apps/reader/modules/readerbookmark.lua:871`, `frontend/apps/reader/modules/readerbookmark.lua:900`, `frontend/apps/reader/modules/readerbookmark.lua:1320` · Trigger: list menu › Select · Widget: ConfirmBox.  
   Design: Reuse library select bar inside the sheet; confirms → `confirm`.
 - **Pinned page (remove pinned page)** (`rd.pin`, missing)  
-  KOReader: `frontend/apps/reader/modules/readergoto.lua:65` · Trigger: skim › pin; go to dialog · Widget: ConfirmBox. Folio today: no pinned-page concept in skim/goto.  
+  KOReader: `frontend/apps/reader/modules/readergoto.lua:65` · Trigger: skim › pin; go to dialog · Widget: ConfirmBox. Leaf today: no pinned-page concept in skim/goto.  
   Design: Pin chip in `skim` + `confirm`.
 - **Book map / page browser options & help** (`rd.bookmap.menu`, missing)  
   KOReader: `frontend/ui/widget/bookmapwidget.lua:1491`, `frontend/ui/widget/bookmapwidget.lua:1524`, `frontend/ui/widget/bookmapwidget.lua:1557` (+4 more) · Trigger: title-bar menu / hold · Widget: ButtonDialog / InfoMessage.  
@@ -177,7 +177,7 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/apps/reader/modules/readerpagemap.lua:90`, `frontend/apps/reader/modules/readerpagemap.lua:280`, `frontend/apps/reader/modules/readerpagemap.lua:412` (+5 more) · Trigger: settings › Stable page numbers · Widget: Menu / InfoMessage / SpinWidget / ConfirmBox.  
   Design: List page like TOC (page labels), settings via generics.
 - **Style tweaks: CSS info, book-specific editor, suggestions** (`rd.styletweak`, partial)  
-  KOReader: `frontend/apps/reader/modules/readerstyletweak.lua:241`, `frontend/apps/reader/modules/readerstyletweak.lua:497`, `frontend/apps/reader/modules/readerstyletweak.lua:559` (+12 more) · Trigger: long-press a tweak; Book-specific tweak · Widget: TweakInfoWidget / InputDialog / ButtonDialog / Notification. Folio today: tweaks menu designed (Drill · Style tweaks › Text); TweakInfoWidget not.  
+  KOReader: `frontend/apps/reader/modules/readerstyletweak.lua:241`, `frontend/apps/reader/modules/readerstyletweak.lua:497`, `frontend/apps/reader/modules/readerstyletweak.lua:559` (+12 more) · Trigger: long-press a tweak; Book-specific tweak · Widget: TweakInfoWidget / InputDialog / ButtonDialog / Notification. Leaf today: tweaks menu designed (Drill · Style tweaks › Text); TweakInfoWidget not.  
   Design: TweakInfoWidget → `menu-help` style sheet with monospace CSS block + Copy; editor → `text-editor`.
 - **Dictionary popup extra menus (hold buttons, more…)** (`dc.buttons`, partial)  
   KOReader: `frontend/ui/widget/dictquicklookup.lua:892`, `frontend/ui/widget/dictquicklookup.lua:1929`, `frontend/ui/widget/dictquicklookup.lua:2020` (+4 more) · Trigger: hold Highlight/Search/Wikipedia buttons, title menu · Widget: ButtonDialog.  
@@ -186,10 +186,10 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
   KOReader: `frontend/ui/screensaver.lua:654`, `frontend/ui/widget/screensaverlockwidget.lua:104` · Trigger: wake when 'delay' = gesture to exit · Widget: ScreenSaverLockWidget.  
   Design: Small bottom pill on the sleep screen: 'Swipe up to unlock'.
 - **Time-range statistics & drill-downs** (`pl.stats.range`, partial)  
-  KOReader: `plugins/statistics.koplugin/main.lua:1305`, `plugins/statistics.koplugin/main.lua:1314`, `plugins/statistics.koplugin/main.lua:1331` (+16 more) · Trigger: stats › Time range › Last week / by month / Books read in… · Widget: KeyValuePage. Folio today: dashboard month/year cards; the per-day/per-book lists are not.  
+  KOReader: `plugins/statistics.koplugin/main.lua:1305`, `plugins/statistics.koplugin/main.lua:1314`, `plugins/statistics.koplugin/main.lua:1331` (+16 more) · Trigger: stats › Time range › Last week / by month / Books read in… · Widget: KeyValuePage. Leaf today: dashboard month/year cards; the per-day/per-book lists are not.  
   Design: KV generic list pages with the stats header; tap a day → day timeline.
 - **All books statistics list & reset** (`pl.stats.books`, partial)  
-  KOReader: `plugins/statistics.koplugin/main.lua:2318`, `plugins/statistics.koplugin/main.lua:2418`, `plugins/statistics.koplugin/main.lua:2436` (+3 more) · Trigger: stats › All books; Reset statistics · Widget: KeyValuePage / ConfirmBox. Folio today: per-book section in stats + reset confirm.  
+  KOReader: `plugins/statistics.koplugin/main.lua:2318`, `plugins/statistics.koplugin/main.lua:2418`, `plugins/statistics.koplugin/main.lua:2436` (+3 more) · Trigger: stats › All books; Reset statistics · Widget: KeyValuePage / ConfirmBox. Leaf today: per-book section in stats + reset confirm.  
   Design: List page of books (cover, time, pages) → current-book stats page.
 - **OPDS page streaming (PSE) viewer** (`pl.opds.pse`, missing)  
   KOReader: `plugins/opds.koplugin/opdspse.lua:46`, `plugins/opds.koplugin/opdspse.lua:74`, `plugins/opds.koplugin/opdspse.lua:133` (+2 more) · Trigger: OPDS › Page stream (Komga, Kavita) · Widget: ImageViewer / InputDialog.  
@@ -208,7 +208,7 @@ Each line: id · what · KOReader file:line · trigger · widget · design sugge
 
 These have no dedicated design. They stay in the old look unless the base widget in the right-hand column is restyled globally (see the safety net below).
 
-| Surface | Base widget(s) | Folio component to mirror |
+| Surface | Base widget(s) | Leaf component to mirror |
 |---|---|---|
 | Multi-choice confirm (3 buttons) (`w.multiconfirmbox`) | MultiConfirmBox | overlay `paste-conflict` layout (title, body, 3 actions) · Library extras › Paste conflict |
 | Button dialog (centred grid of buttons) (`w.buttondialog`) | ButtonDialog | action sheet (`book-actions`/`folder-actions` .ko-sheet + .ko-row) or anchored `.ko-popover` (plus, reader-more) |
@@ -309,13 +309,13 @@ These have no dedicated design. They stay in the old look unless the base widget
 
 ## Global safety net (restyle these base widgets in the Lua port)
 
-Restyling each of these once gives the Folio look to every use, including surfaces never designed individually. Counts are construction sites found in KOReader + plugins + Project: Title (direct `:new`/`notify` calls; subclasses inherit on top).
+Restyling each of these once gives the Leaf look to every use, including surfaces never designed individually. Counts are construction sites found in KOReader + plugins + Project: Title (direct `:new`/`notify` calls; subclasses inherit on top).
 
-| # | Base widget / global (file) | Sites | Inherited by / used inside | Folio target | Status of the Folio design |
+| # | Base widget / global (file) | Sites | Inherited by / used inside | Leaf target | Status of the Leaf design |
 |---:|---|---:|---|---|---|
 | 1 | Font map & sizes (`frontend/ui/font.lua` `Font.fontmap`, `Font.sizemap`) | all | every TextWidget/TextBoxWidget in every widget | Inter (UI), Playfair Display (top-level titles), Literata (book), Noto Naskh Arabic; type scale tokens 10.5–30 | designed (tokens.css); existing patch `2-font-override.lua` swaps to Source Sans: replace it |
-| 2 | Sizes (`frontend/ui/size.lua`: radius, border, padding, margin, line, item heights) | all | every FrameContainer, separators, menu rows | radius tokens, hairline borders, 48px rows, 44px popover rows, 40px buttons | designed; `2-clean-menus.lua` sets `Size.radius.window = 0`: conflicts with Folio's rounded sheets/dialogs, revise |
-| 3 | Colours (`Blitbuffer.COLOR_*` greys) + night mode | all | frames, separators, greyed text, highlight greys | map to tokens; Folio Dark on e-ink = KOReader night mode (whole-screen inversion of the Paper theme), so design Paper first and check the inverted result | designed (tokens) — inversion behaviour must be checked |
+| 2 | Sizes (`frontend/ui/size.lua`: radius, border, padding, margin, line, item heights) | all | every FrameContainer, separators, menu rows | radius tokens, hairline borders, 48px rows, 44px popover rows, 40px buttons | designed; `2-clean-menus.lua` sets `Size.radius.window = 0`: conflicts with Leaf's rounded sheets/dialogs, revise |
+| 3 | Colours (`Blitbuffer.COLOR_*` greys) + night mode | all | frames, separators, greyed text, highlight greys | map to tokens; Leaf Dark on e-ink = KOReader night mode (whole-screen inversion of the Paper theme), so design Paper first and check the inverted result | designed (tokens) — inversion behaviour must be checked |
 | 4 | Icons (`frontend/ui/widget/iconwidget.lua`: user icons dir `koreader/icons/` is searched before `resources/icons/mdlight`) | all | title bars, menus, top-menu tabs, footer, dialogs, file browser | drop Lucide SVGs named like the mdlight files (appbar.*, chevron.*, star.*, …) into `koreader/icons/` | designed (Lucide set); zero-code global win |
 | 5 | Button / ButtonTable / IconButton (`ui/widget/button.lua`, `buttontable.lua`, `iconbutton.lua`) | 87+ | ButtonDialog, ConfirmBox, MultiConfirmBox, InputDialog, Spin/DoubleSpin/DateTime, TextViewer, ImageViewer, KeyboardLayoutDialog, RadioButtonWidget, FontChooser, crop dialog, DictQuickLookup, BookStatusWidget, KeyValuePage, Menu, TouchMenu, SkimTo, SortWidget, CalendarView, FrontLightWidget | `.ko-btn`/`.dl-btn` 40px: ghost secondary, small accent primary, danger; actions right-aligned, no grid lines | designed |
 | 6 | TitleBar (`ui/widget/titlebar.lua`) | 28 | Menu, KeyValuePage, TextViewer, SortWidget, InputDialog, Spin/DoubleSpin/DateTime, BookMap, PageBrowser, ImageViewer, CalendarView, ReaderProgress, FileManager, BookStatusWidget, DictQuickLookup, FontChooser, FrontLight/NaturalLight, RadioButtonWidget, KeyboardLayoutDialog | `.ko-header` (screens: back, title, actions) / `.ko-sheet-head` (17px semibold + sub + close right) / `.dl-title` | designed |
@@ -342,7 +342,7 @@ Restyling each of these once gives the Folio look to every use, including surfac
 
 ### Widgets that draw themselves (a global restyle does NOT reach them; port each one)
 
-They only partly inherit (buttons, title bars, fonts, icons) and need their own Lua work against the named Folio design:
+They only partly inherit (buttons, title bars, fonts, icons) and need their own Lua work against the named Leaf design:
 
 - ReaderFooter (`frontend/apps/reader/modules/readerfooter.lua`) → `.rd-foot` + footer modes (gap rd.footer.modes)
 - ReaderDogear, ReaderFlipping, ReaderView highlight/selection drawing, LinkBox, page gaps → `.rd-dogear`, highlight styles; flipping indicator and link box are gaps
@@ -361,8 +361,8 @@ They only partly inherit (buttons, title bars, fonts, icons) and need their own 
 
 ## Notes for the port
 
-- **Night mode vs. Dark theme:** KOReader night mode inverts the whole framebuffer. On e-ink, Folio's Dark theme will in practice be the inverted Paper theme; check every Paper design inverted, including covers and highlight greys (inverted images are re-inverted by KOReader only for some content).
-- **Existing user patches overlap the port:** `2-clean-menus.lua` (square corners, non-bold buttons, TouchMenu sizes), `2-menu-panel.lua`, `2-library-panel.lua`, `2-dialogs.lua`, `2-font-override.lua` (Source Sans) and `2-paragraph-translate.lua` (TextViewer translation). Replace or merge them, otherwise two styles fight (e.g. radius 0 vs. Folio's rounded sheets).
+- **Night mode vs. Dark theme:** KOReader night mode inverts the whole framebuffer. On e-ink, Leaf's Dark theme will in practice be the inverted Paper theme; check every Paper design inverted, including covers and highlight greys (inverted images are re-inverted by KOReader only for some content).
+- **Existing user patches overlap the port:** `2-clean-menus.lua` (square corners, non-bold buttons, TouchMenu sizes), `2-menu-panel.lua`, `2-library-panel.lua`, `2-dialogs.lua`, `2-font-override.lua` (Source Sans) and `2-paragraph-translate.lua` (TextViewer translation). Replace or merge them, otherwise two styles fight (e.g. radius 0 vs. Leaf's rounded sheets).
 - **Kindle native pieces cannot be restyled from Lua:** the Kindle activity spinner (`readeractivityindicator.lua`, uses lipc) and the Kindle lock/ads screen when the device still has special offers (KOReader's sleep screen only shows if `supportsScreensaver`).
 - **Disable the stock Cover browser plugin** (Project: Title replaces it) so its mosaic/list and its spinner dialogs never appear.
 - **One-time / first-run surfaces** to test on a clean profile: quickstart guide, 'Gestures have been upgraded' (`plugins/gestures.koplugin/main.lua:1310`), first multiswipe prompt (`:1334`), 'Restore metadata from archive?' (`frontend/apps/reader/readerui.lua:649`), Project: Title first indexing progress, 'No dictionaries installed' dictionary state.

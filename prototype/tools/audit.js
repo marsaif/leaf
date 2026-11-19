@@ -1,4 +1,4 @@
-/* Folio design linter — in-page part. Evaluated by tools/audit.py once per state.
+/* Leaf design linter — in-page part. Evaluated by tools/audit.py once per state.
    (cfg) => { issues: [...], metrics: [...], sizes: {fs: count}, owner }
    cfg carries the explicit allow-lists defined at the top of audit.py. */
 (cfg) => {

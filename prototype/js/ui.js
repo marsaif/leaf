@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Folio UI — small HTML helpers that produce the markup of the component library
+   Leaf UI — small HTML helpers that produce the markup of the component library
    (css/components.css). Every helper returns an HTML string; behaviour stays in
    data attributes handled by core.js (data-action / data-open / data-go / data-close).
 

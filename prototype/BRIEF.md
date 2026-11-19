@@ -1,4 +1,4 @@
-# Folio — KOReader redesign prototype (HTML)
+# Leaf — KOReader redesign prototype (HTML)
 
 The goal is an interactive HTML prototype of a **complete redesign of KOReader** (the e-reader app), used to
 validate the design before it is reimplemented as KOReader Lua patches. The user wants a *great* app,

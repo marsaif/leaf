@@ -324,7 +324,7 @@
         ${UI.closeButton({ cls: "ab-x" })}
         <div class="ab-head">
           <span class="ab-mark serif">K</span>
-          <div><div class="ab-name">KOReader</div><div class="ab-ver num">v2026.07.1 · Folio UI</div></div>
+          <div><div class="ab-name">KOReader</div><div class="ab-ver num">v2026.07.1 · Leaf UI</div></div>
         </div>
         <p class="ab-tag">A document viewer for E Ink devices. Free and open source, made by volunteers since 2012.</p>
         ${UI.kv([["Device", "Kindle Paperwhite"], ["Screen", "1264 × 1680 · 300 ppi"], ["Build", "2026-07-14 · kindlepw2 · armv7"], ["Licence", "AGPL-3.0"]], { cls: "ab-list" })}

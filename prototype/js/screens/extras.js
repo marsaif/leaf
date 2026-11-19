@@ -632,7 +632,7 @@
       if (st === "searching") {
         return sheet("ex-cal", head,
           `<div class="ex-searching"><span class="ex-pulse">${I("radar")}</span><div class="ex-sr-t">Looking for calibre…</div><div class="ex-sr-s num">Searching 192.168.1.0/24 · 6 s</div></div>
-           ${label("On your computer")}<ol class="ex-steps"><li><b>1</b><span>Open <b>calibre</b> and click <b>Connect/share</b>.</span></li><li><b>2</b><span>Choose <b>Start wireless device connection</b>.</span></li><li><b>3</b><span>Keep this screen open. Folio connects on its own.</span></li></ol>` + settings,
+           ${label("On your computer")}<ol class="ex-steps"><li><b>1</b><span>Open <b>calibre</b> and click <b>Connect/share</b>.</span></li><li><b>2</b><span>Choose <b>Start wireless device connection</b>.</span></li><li><b>3</b><span>Keep this screen open. Leaf connects on its own.</span></li></ol>` + settings,
           `<button class="ko-btn" data-open="input" data-params="${A.attrs({ title: "calibre address", hint: "192.168.1.20:9090", ok: "Connect", layout: "numeric" })}">${I("keyboard", "sm")}Enter address</button><button class="ko-btn ko-btn--primary grow" data-action="ex-cal" data-arg="connected">${I("refresh-cw", "sm")}Search again</button>`);
       }
       if (st === "connected") {
@@ -713,7 +713,7 @@
     { id: "commute", n: "Commute", ic: "train-front", acts: [["Wi-Fi", "Off"], ["Autoturn", "Off"], ["Status bar", "Minimal"]], auto: [] },
     { id: "papers", n: "PDF papers", ic: "file-text", acts: [["Two columns", "On"], ["Contrast", "1.4"], ["Margins", "Crop"], ["Rotation", "Landscape"]], auto: ["When a book opens", "On rotation"] },
   ];
-  const TRIGGERS = [["power", "When Folio starts"], ["sun", "On wake-up"], ["book-open", "When a book opens"], ["book", "When a book closes"], ["rotate-cw", "On rotation"], ["battery-charging", "When charging starts"], ["battery", "When charging stops"]];
+  const TRIGGERS = [["power", "When Leaf starts"], ["sun", "On wake-up"], ["book-open", "When a book opens"], ["book", "When a book closes"], ["rotate-cw", "On rotation"], ["battery-charging", "When charging starts"], ["battery", "When charging stops"]];
   A.overlay("profiles", {
     layer: "sheet",
     render(p) {
@@ -798,7 +798,7 @@
         + label("Sync") + group(row("download", "Download new articles from server", `data-action="ex-wb" data-arg="syncing"`) + row("upload", "Upload queue of locally added articles", `data-toast="4 articles uploaded"`, { value: "4" }) + row("check-check", "Upload article statuses to server", `data-toast="6 statuses uploaded"`, { value: "6" }) + row("folder-open", "Go to download folder", `data-go="folder" data-params="${A.attrs({ path: "Articles" })}"`, { chev: true }))
         + label("Downloads") + group(tgRow("star", "Only download starred articles", "wb.star", false) + stepRow("hash", "Articles to keep locally", "wb.keep", 30, 5, 200) + tgRow("file-type", "Prefer original non-HTML document", "wb.orig", false))
         + label("After reading") + group(tgRow("check", "Mark finished articles as read", "wb.mark", true) + tgRow("archive", "Delete remotely archived articles locally", "wb.del", true, "Moved to the archive folder instead, if one is set"))
-        + label("Account") + group(row("server-cog", "Configure Wallabag server", `data-action="ex-wb" data-arg="setup"`, { chev: true }) + row("info", "Info", `data-open="info" data-params="${A.attrs({ title: "Wallabag", icon: "newspaper", body: "Wallabag is a self-hostable read-it-later service. Folio downloads unread articles as EPUBs and sends back what you finished." })}"`, { chev: true })),
+        + label("Account") + group(row("server-cog", "Configure Wallabag server", `data-action="ex-wb" data-arg="setup"`, { chev: true }) + row("info", "Info", `data-open="info" data-params="${A.attrs({ title: "Wallabag", icon: "newspaper", body: "Wallabag is a self-hostable read-it-later service. Leaf downloads unread articles as EPUBs and sends back what you finished." })}"`, { chev: true })),
         syncing ? `<button class="ko-btn grow" data-action="ex-wb" data-arg="account">${I("square", "sm")}Stop</button>` : `<button class="ko-btn ko-btn--primary grow" data-action="ex-wb" data-arg="syncing">${I("refresh-cw", "sm")}Sync now</button>`);
     },
   });
@@ -880,7 +880,7 @@ To do
     ["cmd", "uname -a"], ["out", "Linux kobo 4.9.77 #1 SMP PREEMPT armv7l GNU/Linux"],
     ["cmd", "df -h /mnt/onboard"], ["out", "Filesystem      Size  Used Avail Use% Mounted on"], ["out", "/dev/mmcblk0p3   28G   24G  3.1G  89% /mnt/onboard"],
     ["cmd", "ls /mnt/onboard/Books/Classics | head -4"], ["out", "Animal Farm.epub"], ["out", "Crime and Punishment.epub"], ["out", "Frankenstein.epub"], ["out", "Jane Eyre.epub"],
-    ["cmd", "tail -n 2 crash.log"], ["out", "11/19 21:04:12 INFO  Folio started · KOReader 2026.07.1"], ["out", "11/19 21:04:13 INFO  Wi-Fi connected · Home-5G"],
+    ["cmd", "tail -n 2 crash.log"], ["out", "11/19 21:04:12 INFO  Leaf started · KOReader 2026.07.1"], ["out", "11/19 21:04:13 INFO  Wi-Fi connected · Home-5G"],
   ];
   A.overlay("terminal", {
     layer: "page",

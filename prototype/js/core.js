@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Folio core — tiny router + overlay stack + helpers shared by every screen.
+   Leaf core — tiny router + overlay stack + helpers shared by every screen.
 
    Screens:   App.screen("library", { title, group, render(params) => html })
    Overlays:  App.overlay("plus",   { title, group, render(params) => html, layer: "popover"|"sheet"|"dialog"|"page" })
@@ -18,7 +18,7 @@
     screens: {}, overlays: {}, actions: {}, demos: [],
     state: { stack: [] }, // overlay stack: [{name, params}]
     current: { name: "home", params: {} },
-    store: JSON.parse(localStorage.getItem("folio.store") || "{}"), // persisted UI prefs
+    store: JSON.parse(localStorage.getItem("leaf.store") || "{}"), // persisted UI prefs
   });
 
   /* ---------- registry ---------- */
@@ -28,7 +28,7 @@
   /** add an entry in the designer's state navigator (left panel) */
   App.demo = (group, label, hash) => { App.demos.push({ group, label, hash }); };
 
-  App.save = () => localStorage.setItem("folio.store", JSON.stringify(App.store));
+  App.save = () => localStorage.setItem("leaf.store", JSON.stringify(App.store));
   App.get = (k, d) => (k in App.store ? App.store[k] : d);
   App.set = (k, v) => { App.store[k] = v; App.save(); };
 
@@ -72,7 +72,7 @@
     }
     const h = `#/${App.current.name}${[...q].length ? "?" + q.toString() : ""}`;
     if (location.hash !== h) history.replaceState(null, "", h);
-    document.dispatchEvent(new CustomEvent("folio:navigate"));
+    document.dispatchEvent(new CustomEvent("leaf:navigate"));
   };
   const parseVal = (v) => { try { return JSON.parse(v); } catch { return v; } };
   App.fromHash = () => {

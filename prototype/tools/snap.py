@@ -32,7 +32,7 @@ def key_of(d):
 
 async def settle(page, h):
     await page.evaluate("""async (h) => {
-        localStorage.removeItem('folio.store'); App.store = {};
+        localStorage.removeItem('leaf.store'); App.store = {};
         App.state = { stack: [] };
         document.querySelectorAll('.ko-toast').forEach(t => t.remove());
         history.replaceState(null, '', h); App.fromHash(); App.render();

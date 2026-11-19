@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Folio — System screens (owned by the System agent)
+   Leaf — System screens (owned by the System agent)
 
    overlays  opening      (page)    {id, phase:"open"|"cache", pct, auto, first}
              error        (dialog)  {kind:"unsupported"|"corrupt"|"storage", file}
@@ -110,9 +110,9 @@
      ================================================================= */
   const ERR = {
     unsupported: { icon: "file-x", title: "Couldn't open this file", file: "Quarterly report.pages",
-      body: (f) => `Folio can't read “${f}”. Apple Pages documents aren't a format KOReader supports.`,
+      body: (f) => `Leaf can't read “${f}”. Apple Pages documents aren't a format KOReader supports.`,
       list: [["Format", "Apple Pages (.pages)"], ["Size", "2.4 MB"], ["Folder", "/mnt/us/documents"]],
-      hint: "Export it as PDF or EPUB on your computer, then copy it over. Folio reads EPUB, PDF, DjVu, CBZ, FB2, MOBI, DOCX, RTF, TXT and HTML.",
+      hint: "Export it as PDF or EPUB on your computer, then copy it over. Leaf reads EPUB, PDF, DjVu, CBZ, FB2, MOBI, DOCX, RTF, TXT and HTML.",
       acts: [["folder-open", "Show in folder", "Opens the library at this file", 'data-action="syErrAct" data-msg="Showing in library"'],
         ["usb", "Copy a converted file", "Connect to your computer over USB", 'data-action="syErrUsb"']] },
     corrupt: { icon: "file-warning", title: "This book seems damaged", file: "The Hound of the Baskervilles.epub",
@@ -206,7 +206,7 @@
       const crit = st === "critical", pct = Number(p.pct ?? (crit ? 4 : 15));
       return `<div class="ko-dialog ko-dialog--scroll sy-batt-dlg ${crit ? "crit" : ""}">
         <div class="ko-dialog-title">${battGlyph(pct)}<span class="grow">${crit ? "Battery critically low" : "Battery low"}</span><span class="sy-batt-n num">${pct}%</span></div>
-        <div class="ko-dialog-body">${crit ? "Folio will save your place and go to sleep at 3%. Connect a charger now." : "About 2 days of reading left at your usual pace. Connect a charger soon."}</div>
+        <div class="ko-dialog-body">${crit ? "Leaf will save your place and go to sleep at 3%. Connect a charger now." : "About 2 days of reading left at your usual pace. Connect a charger soon."}</div>
         ${crit ? `<div class="sy-err-hint">${icon("bookmark-check", "sm")}<span>Your place in <b>${esc(shortTitle(b))}</b> is saved.</span></div>` : `<div class="ko-group ko-group--sunken sy-dlg-group">
           ${flagRow("leaf", "Battery saver", "Dimmer light, Wi-Fi off", "sy.saver", false)}
           ${linkRow("bell", "Alert thresholds", "", 'data-action="syBattSettings"', "20% / 100%")}
@@ -328,7 +328,7 @@
             ${storageBar("3.1 GB", [["Books", 21.4, "a"], ["Cache & covers", 1.2, "b"], ["System & other", 2.9, "c"]])}
           </div>`}
         </div></div>
-        ${importing ? "" : `<footer class="sy-usb-foot"><button class="ko-btn ko-btn--primary sy-nowrap sy-wide" data-action="syUsbExit">${icon("log-out", "sm")}Exit USB mode</button><div class="sy-usb-note">${icon("lock", "sm")}Folio is paused while connected. Your reading position is saved.</div></footer>`}
+        ${importing ? "" : `<footer class="sy-usb-foot"><button class="ko-btn ko-btn--primary sy-nowrap sy-wide" data-action="syUsbExit">${icon("log-out", "sm")}Exit USB mode</button><div class="sy-usb-note">${icon("lock", "sm")}Leaf is paused while connected. Your reading position is saved.</div></footer>`}
       </div>`;
     },
   });
@@ -370,7 +370,7 @@
       const bs = ["frankenstein", "animal-farm", "siddhartha"].map((id) => DB.book(id));
       return `<div class="sy-wel-hero">
         <div class="sy-fan">${bs.map((b, i) => `<div class="sy-fan-c c${i}">${Cover.html(b)}</div>`).join("")}</div>
-        <div class="sy-wordmark serif">Folio</div>
+        <div class="sy-wordmark serif">Leaf</div>
         <p class="sy-wel-tag">A calm home for your books, built on KOReader.</p>
         <div class="ko-group sy-wel-points">
           ${gestRow("palette", "Pick a look and reading defaults", "Dark or Paper, font size, margins")}
@@ -416,7 +416,7 @@
       ${linkRow("hand", "Customise every zone", "Later, in Taps and gestures › Tap zones", 'data-go="tapzones"')}</div>`;
     if (step === 4) {
       const F = [["/mnt/us/documents", "Documents", "Kindle's default folder · 24 books found"], ["/mnt/us/books", "Books", "7 books found"], ["/mnt/us", "Whole device", "Slower to scan · 31 books found"]];
-      return hd(4, "Where are your books?", "Folio shows this folder as your library. Books copied over USB should go here.") + `
+      return hd(4, "Where are your books?", "Leaf shows this folder as your library. Books copied over USB should go here.") + `
         <div class="ko-group sy-folders" role="radiogroup">${F.map(([path, l, sub]) => `<button class="ko-row sy-row sy-radio-row ${s.folder === path ? "on" : ""}" role="radio" aria-checked="${s.folder === path}" data-action="welFolder" data-v="${path}">${App.radio(s.folder === path)}<span class="label"><span class="t">${l}<span class="sy-path">${path}</span></span><span class="sub">${sub}</span></span></button>`).join("")}
           ${linkRow("folder-search", "Choose another folder…", "Browse the device", 'data-toast="Opening folder picker"')}</div>
         <div class="ko-section-label sy-sl">Options</div>
@@ -469,7 +469,7 @@
   App.action("welSizeSl", (s, v) => setSize(12 + v * 20));
   App.action("welStep", (el) => setSize(App.get("wel.size", 20) + Number(el.dataset.dir)));
   App.action("welSkip", () => { App.set("wel.done", true); App.go("home"); App.toast("Quickstart skipped · find it in Help"); });
-  App.action("welFinish", () => { App.set("wel.done", true); App.go("home"); App.toast("Welcome to Folio"); });
+  App.action("welFinish", () => { App.set("wel.done", true); App.go("home"); App.toast("Welcome to Leaf"); });
 
   /* =================================================================
      7. Visual tap-zone editor
@@ -497,7 +497,7 @@
     [/status/i, "panel-bottom"], [/rotat|orientation/i, "rotate-cw"], [/screenshot/i, "camera"], [/statistics/i, "chart-column"], [/link/i, "link"],
     [/reflow/i, "wrap-text"], [/selection|highlight/i, "highlighter"], [/wi-?fi|network/i, "wifi"], [/sleep|exit|restart/i, "power"]];
   const actIcon = (a) => (ACT_IC.find(([re]) => re.test(a || "")) || [0, "zap"])[1];
-  const catOf = (a) => { if (BUILTIN.includes(a)) return "Folio"; for (const c of actionCats()) if (c.items.some((x) => x.t === a)) return c.name.replace(/\s*\(.*\)$/, ""); return ""; };
+  const catOf = (a) => { if (BUILTIN.includes(a)) return "Leaf"; for (const c of actionCats()) if (c.items.some((x) => x.t === a)) return c.name.replace(/\s*\(.*\)$/, ""); return ""; };
 
   // zone boxes in % of the screen: [x, y, w, h]
   const C = 13, CW = 22;
@@ -653,7 +653,7 @@
         <div class="sy-pick-filter"><label class="ko-input">${icon("search", "sm")}<input type="search" placeholder="Filter ${total} actions…" data-sy-filter=".sy-pick"></label></div>
         <div class="ko-scroll sy-pick-list">
           <div class="ko-group sy-fgroup">${row("Pass through", "The tap reaches the page: links, footnotes")}${row("Nothing", "Ignore this gesture")}</div>
-          ${truthy(p.builtin) ? `<div class="ko-section-label sy-fhead">Folio</div><div class="ko-group sy-fgroup">${BUILTIN.map((t) => row(t)).join("")}</div>` : ""}
+          ${truthy(p.builtin) ? `<div class="ko-section-label sy-fhead">Leaf</div><div class="ko-group sy-fgroup">${BUILTIN.map((t) => row(t)).join("")}</div>` : ""}
           ${cats.map((c) => `<div class="ko-section-label sy-fhead">${esc(c.name)} <span class="sy-count">${c.items.length}</span></div><div class="ko-group sy-fgroup">${c.items.map((x) => row(x.t)).join("")}</div>`).join("")}
           <div class="sy-nores faint" hidden>No action matches.</div>
           <div class="sy-end"></div>
@@ -824,7 +824,7 @@
      6. Software update
      ================================================================= */
   const CHANGES = [
-    ["New", ["Folio interface: new home, library, reader and settings", "Visual tap-zone editor in Taps and gestures", "Dictionary catalog with offline Wiktionary, including English → Arabic"]],
+    ["New", ["Leaf interface: new home, library, reader and settings", "Visual tap-zone editor in Taps and gestures", "Dictionary catalog with offline Wiktionary, including English → Arabic"]],
     ["Improved", ["Large EPUBs open up to 3× faster", "Arabic shaping and justification in mixed-language books", "PDF reflow keeps simple tables together"]],
     ["Fixed", ["Highlights inside footnotes now export correctly", "Wi-Fi reconnects after sleep on Kindle Paperwhite", "Rare crash with CBZ files that have very long names"]],
   ];
@@ -840,9 +840,9 @@
           <div class="sy-op-author">Keep the device on</div>
           <div class="sy-op-track">${App.progress(pct, "ko-progress--thin")}</div>
           <div class="sy-op-cap"><span class="sy-op-step">Replacing files…</span><span class="num sy-op-pct">${pct}%</span></div>
-          <div class="sy-op-note">Folio restarts by itself and reopens ${esc(shortTitle(DB.current()))} where you left off.</div></div>
+          <div class="sy-op-note">Leaf restarts by itself and reopens ${esc(shortTitle(DB.current()))} where you left off.</div></div>
           <div class="sy-op-foot"><span>v2026.07.1</span>${icon("arrow-right", "sm")}<span>v2026.08</span></div></div>`;
-      const cur = `<div class="ko-card sy-upd-cur"><span class="sy-upd-mark">K</span><div class="grow"><b>KOReader v2026.07.1</b><span>Folio UI · installed 14 July · ${App.get("upd.channel", "stable") === "stable" ? "Stable" : "Nightly"} channel</span></div></div>`;
+      const cur = `<div class="ko-card sy-upd-cur"><span class="sy-upd-mark">K</span><div class="grow"><b>KOReader v2026.07.1</b><span>Leaf UI · installed 14 July · ${App.get("upd.channel", "stable") === "stable" ? "Stable" : "Nightly"} channel</span></div></div>`;
       let main = "";
       if (st === "idle") main = `<div class="sy-upd-state">${icon("clock", "sm")}<span>Last checked 3 days ago</span></div><button class="ko-btn ko-btn--primary ko-btn--block sy-nowrap" data-action="updCheck">${icon("refresh-cw", "sm")}Check for updates</button>`;
       if (st === "checking") main = `<div class="sy-upd-state">${icon("loader", "sm ko-spin")}<span>Checking koreader.rocks…</span></div><button class="ko-btn ko-btn--block sy-nowrap" disabled>Checking…</button>`;

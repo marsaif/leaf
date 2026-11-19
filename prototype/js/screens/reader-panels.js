@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Folio — Reader panels (owned by the Reader agent)
+   Leaf — Reader panels (owned by the Reader agent)
    Overlays: reader-more, toc, bookmarks, annotations, annotations-export, goto, skim,
              bookmap, pagebrowser, hl-popup, hl-note, hyphenate, qr, view-html,
              dict, translate, wiki, book-end

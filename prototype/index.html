@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Folio — KOReader redesign prototype</title>
+  <title>Leaf — KOReader redesign prototype</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
@@ -59,7 +59,7 @@
 </head>
 <body>
   <aside id="designer">
-    <h1>Folio</h1>
+    <h1>Leaf</h1>
     <div class="sub">KOReader redesign · interactive prototype</div>
     <div class="controls">
       <div class="ctl" id="ctl-theme"><button data-v="dark">Dark</button><button data-v="paper">Paper</button></div>
@@ -123,7 +123,7 @@
       document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === location.hash));
       document.getElementById("hashline").textContent = location.hash;
     }
-    document.addEventListener("folio:navigate", markNav);
+    document.addEventListener("leaf:navigate", markNav);
     window.addEventListener("hashchange", markNav);
     applyShell(); buildNav(); App.boot(); markNav();
   </script>
