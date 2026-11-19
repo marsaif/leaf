@@ -80,6 +80,7 @@ MAP = {
     "plus": "plus",
     "leaf.minus": "minus",  # Leaf's own: slider-row step button (KOReader has no minus icon)
     # Leaf's own: on-screen keyboard function keys (prototype keyboardHTML)
+    "leaf.trash": "trash-2",  # Leaf's own: destructive confirm title (UI.dialog danger icon)
     "leaf.kb.shift": "arrow-big-up",
     "leaf.kb.caps": "arrow-big-up-dash",
     "leaf.kb.backspace": "delete",

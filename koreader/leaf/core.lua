@@ -34,6 +34,7 @@ L.MODULES = {
     "inputs",
     "scrim",
     "keyboard",
+    "confirm",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
