@@ -452,6 +452,18 @@ local SCENES = {
         LK.select(0.30, 0.30, true)
         hl:lookupDictWord()
     end },
+    -- the popup's Translate (KOReader's online Translator), with a canned answer (no network in the sandbox)
+    { "lk-translator", function()
+        local Tr = require("ui/translator")
+        local load = Tr.loadPage
+        Tr.loadPage = function() return { { { "كان السيد جونز، صاحب مزرعة مانور، قد أقفل أبواب أكواخ الدجاج لليلة، لكنه كان أسكر من أن يتذكّر إغلاق الفتحات الصغيرة.",
+            "Mr. Jones, of the Manor Farm, had locked the hen-houses for the night, but was too drunk to remember to shut the pop-holes." } }, nil, "en" } end
+        LK.select(0.42, 0.46)
+        require("ui/trapper"):wrap(function()
+            Tr:_showTranslation(RUI().highlight.selected_text.text, false, "en", "ar", true)
+            Tr.loadPage = load
+        end)
+    end, wait = 3 },
     { "lk-footnote", function()
         local ui = RUI()
         local FootnoteWidget = require("ui/widget/footnotewidget")
@@ -473,9 +485,9 @@ local SCENES = {
     end },
     { "search-book-results", function()
         local s = RUI().search
-        s.last_search_text = "the"
+        s.last_search_text = "silence"
         s.case_insensitive = true
-        require("ui/trapper"):wrap(function() s:findAllText("the") end)
+        require("ui/trapper"):wrap(function() s:findAllText("silence") end)
     end, wait = 3 },
     -- end system and tools reader scenes
     -- typeset scenes (EPUB: every tab; then the PDF panel, which replaces the reader: keep it last)

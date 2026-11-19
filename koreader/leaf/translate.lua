@@ -40,6 +40,9 @@ local function hex(T, name)
 end
 
 function M.restyle(L, Panel, translate, neighbor, html_escape)
+    -- leaf/lookup.lua draws the panel (M.build_translate, called by the patch itself): that is the
+    -- prototype's sheet; this older restyle is only the fallback when the lookup module failed
+    if L.status and L.status.lookup == true then return end
     if not (translate and neighbor) then
         L.err("translate: patch internals not found, panel keeps its own look")
         return

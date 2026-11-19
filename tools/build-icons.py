@@ -305,6 +305,10 @@ MAP = {
     "leaf.sys.trend.up": "trending-up",
     "leaf.sys.check": "check",
     # -- end system and tools
+    # -- lookup and search (polish)
+    "leaf.sys.user": "user-round",
+    "leaf.sys.titles": "book-copy",
+    # -- end lookup and search
 }
 
 KEEP_STOCK = {
