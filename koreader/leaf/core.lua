@@ -43,6 +43,7 @@ L.MODULES = {
     "footer",
     "typeset",
     "booksheet",
+    "bookdetails",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

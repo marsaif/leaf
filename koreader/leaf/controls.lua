@@ -35,6 +35,9 @@ end
 
 function M.apply(L)
     local T = L.T
+    -- icons draw with transparency: Leaf puts them on tinted surfaces (--bg, --bg-raised, keys,
+    -- tiles), where KOReader's opaque white icon box would show
+    require("ui/widget/iconwidget").alpha = true
     for kind, mod in pairs({ check = "ui/widget/checkmark", radio = "ui/widget/radiomark" }) do
         local Class = require(mod)
         L.wrap(Class, "init", function(orig, self)

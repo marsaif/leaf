@@ -154,6 +154,9 @@ local SCENES = {
         title = "Book information",
         kv_pairs = { { "Title", "Animal Farm" }, { "Author", "George Orwell" }, { "Format", "EPUB" },
             { "Pages", "112" }, "----", { "Language", "en" }, { "Size", "412 KB" } } }) end },
+    { "bookdetails", function()
+        FM().bookinfo:show(G_reader_settings:readSetting("home_dir") .. "/Animal Farm (EN-AR).epub")
+    end },
     { "catalog", function()
         local ok, catalog = pcall(require, "leaf/catalog")
         if ok then catalog.show() else logger.info("autoshot: no leaf/catalog yet") end
