@@ -1,0 +1,5 @@
+<!-- Leaf control mark, colours from tokens.css (paper); built by tools/build-icons.py -->
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<rect x=".75" y=".75" width="18.5" height="18.5" rx="5" fill="#a4553f" stroke="#a4553f" stroke-width="1.5"/>
+<path d="M5.5 10.4 8.6 13.4 14.6 6.8" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

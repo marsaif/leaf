@@ -155,6 +155,32 @@ def render(lucide_svg, name, sw, fill="none"):
             f"{inner}\n</svg>\n")
 
 
+def paper(name):
+    """a colour token of the Paper theme (the e-ink theme) from tokens.css"""
+    block = re.search(r"\.theme-paper \{(.*?)\n\}", TOKENS.read_text(), re.S).group(1)
+    return re.search(rf"--{name}:\s*(#[0-9a-fA-F]{{6}});", block).group(1)
+
+
+def controls():
+    """Leaf's check box and radio (.ko-check / .ko-radio): 20px, --bw-md outline in --border-strong;
+    selected = accent fill + accent-ink tick / accent ring + dot. Shape differs too (e-ink safe)."""
+    line, accent, ink = paper("border-strong"), paper("accent"), paper("accent-ink")
+    head = '<!-- Leaf control mark, colours from tokens.css (paper); built by tools/build-icons.py -->\n'
+    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">\n{}\n</svg>\n'
+    return {
+        "leaf.check.off.svg": head + svg.format(
+            f'<rect x=".75" y=".75" width="18.5" height="18.5" rx="5" fill="none" stroke="{line}" stroke-width="1.5"/>'),
+        "leaf.check.on.svg": head + svg.format(
+            f'<rect x=".75" y=".75" width="18.5" height="18.5" rx="5" fill="{accent}" stroke="{accent}" stroke-width="1.5"/>\n'
+            f'<path d="M5.5 10.4 8.6 13.4 14.6 6.8" fill="none" stroke="{ink}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'),
+        "leaf.radio.off.svg": head + svg.format(
+            f'<circle cx="10" cy="10" r="9.25" fill="none" stroke="{line}" stroke-width="1.5"/>'),
+        "leaf.radio.on.svg": head + svg.format(
+            f'<circle cx="10" cy="10" r="9.25" fill="none" stroke="{accent}" stroke-width="1.5"/>\n'
+            f'<circle cx="10" cy="10" r="5" fill="{accent}"/>'),
+    }
+
+
 def main():
     dry = "--dry-run" in sys.argv
     sw = stroke_width()
@@ -172,6 +198,7 @@ def main():
         out[f"{stock}.svg"] = render(lucide[hit], hit, sw, opts.get("fill", "none"))
         report["mapped"].append(f"{stock} -> {hit}")
 
+    out.update(controls())
     for f in sorted(OUT.glob("*.svg")):
         if f.name in out:
             continue
@@ -195,7 +222,8 @@ def main():
             (OUT / name).write_text(svg)
     print(f"lucide-static {LUCIDE_VERSION}: {len(lucide)} icons; stroke-width {sw}")
     print(f"{'would write' if dry else 'wrote'} {len(out)} icons to {OUT.relative_to(REPO)}: "
-          f"{len(report['mapped'])} stock names mapped, {len(report['restroked'])} existing re-stroked")
+          f"{len(report['mapped'])} stock names mapped, {len(report['restroked'])} existing re-stroked, "
+          f"{len(controls())} control marks")
     print(f"kept stock on purpose: {len(KEEP_STOCK)} ({', '.join(sorted(set(KEEP_STOCK.values())))})")
     for k in ("missing_lucide", "unknown", "unmapped_stock"):
         if report[k]:

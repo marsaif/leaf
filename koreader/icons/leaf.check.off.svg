@@ -1,0 +1,4 @@
+<!-- Leaf control mark, colours from tokens.css (paper); built by tools/build-icons.py -->
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<rect x=".75" y=".75" width="18.5" height="18.5" rx="5" fill="none" stroke="#c9c6bc" stroke-width="1.5"/>
+</svg>
