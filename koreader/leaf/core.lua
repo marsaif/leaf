@@ -47,6 +47,11 @@ L.MODULES = {
     "kvpages",
     "lookup",
     "home",
+    -- system and tools
+    "stats",
+    "search",
+    "wifi",
+    "system",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
