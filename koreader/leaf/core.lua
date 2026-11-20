@@ -62,6 +62,12 @@ L.MODULES = {
     "bookactions",
     -- gaps: library (select mode list, connected folders, metadata fields, archive viewer)
     "gapslib",
+    -- gaps: generic widgets
+    "arrange",
+    "imageviewer",
+    "pathchooser",
+    "openwith",
+    "unlock",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

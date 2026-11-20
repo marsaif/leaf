@@ -34,6 +34,17 @@ function M.apply(L)
         Size.line.thick = thick
         if not ok then error(err, 0) end
 
+        -- info text (InputDialog's description): --text-3, like a sub line
+        if self.info_text then
+            local last = self[#self]
+            local hg = last and last[2]
+            local tb = hg and hg[2]
+            if type(tb) == "table" and tb.text == self.info_text and tb.face then
+                hg[2] = require("ui/widget/textboxwidget"):new{ text = tb.text, face = tb.face, width = tb.width,
+                    lang = tb.lang, fgcolor = T.color("text-3") }
+                tb:free()
+            end
+        end
         local sub = self.subtitle_widget
         if sub then
             sub.fgcolor = T.color("text-3")

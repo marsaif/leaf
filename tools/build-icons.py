@@ -361,6 +361,16 @@ MAP = {
         "folderinput": "folder-input", "folderplus": "folder-plus", "x": "x",
     }.items()},
     # -- end gaps library
+    # -- gaps-widgets (spinners, date/time, arrange, path chooser, image viewer, keyboard popups,
+    #    clipboard, open with, unlock): leaf.gw.<lucide name>
+    **{f"leaf.gw.{n}": n for n in (
+        "circle-alert clock clock-3 calendar timer keyboard info grip-vertical move-vertical chevrons-up "
+        "chevron-up chevron-down chevrons-down chevron-right arrow-down-a-z arrow-up-z-a arrow-down-1-0 "
+        "arrow-up-1-0 undo-2 corner-left-up folder file file-image file-archive house folder-symlink "
+        "folder-plus x expand shrink rotate-cw camera pin clipboard clipboard-paste copy text type "
+        "text-select trash-2 ellipsis settings-2 book-open-text file-text file-code rotate-ccw list "
+        "pointer plus minus arrow-left captions captions-off hash chevrons-up pointer").split()},
+    # -- end gaps-widgets
 }
 
 KEEP_STOCK = {
