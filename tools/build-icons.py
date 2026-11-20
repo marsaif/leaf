@@ -352,6 +352,15 @@ MAP = {
     "leaf.lib.check.bold": (["check"], {"stroke": "bold"}),
     "leaf.lib.heart.bold": (["heart"], {"stroke": "bold"}),
     # -- end library polish
+    # -- gaps library (select mode, collections folders, book info fields, archive viewer)
+    **{f"leaf.gl.{k}": v for k, v in {
+        "more": "ellipsis-vertical", "filetype": "file-type", "bookcheck": "book-check", "foldertree": "folder-tree",
+        "scansearch": "scan-search", "unlink": "unlink", "sparkles": "sparkles", "pencil": "pencil",
+        "textinput": "text-cursor-input", "filesearch": "file-search", "eye": "eye", "imageplus": "image-plus",
+        "filearchive": "file-archive", "fileimage": "file-image", "packageopen": "package-open", "download": "download",
+        "folderinput": "folder-input", "folderplus": "folder-plus", "x": "x",
+    }.items()},
+    # -- end gaps library
 }
 
 KEEP_STOCK = {

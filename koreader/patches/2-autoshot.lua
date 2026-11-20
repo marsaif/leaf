@@ -105,6 +105,7 @@ local noop = function() end
 
 local LK = {} -- lookup scenes: helpers, defined below the list
 local LIB = {} -- library scenes: helpers, defined below the list
+local GL = {} -- gaps library scenes: helpers, defined below the list
 -- desktop has no Wi-Fi hardware: a fake scan result (system and tools scenes)
 function LEAF_FAKE_NETWORKS()
     return {
@@ -313,6 +314,75 @@ local SCENES = {
         local ok, catalog = pcall(require, "leaf/catalog")
         if ok then catalog.show() else logger.info("autoshot: no leaf/catalog yet") end
     end },
+    -- gaps library scenes (leaf/gapslib.lua): select mode list, connected folders, metadata fields,
+    -- archive viewer (a test archive made in the sandbox), OPDS page stream (stubbed HTTP)
+    { "gl-selfiles", function()
+        LIB.seed()
+        local h = G_reader_settings:readSetting("home_dir")
+        FM().selected_files = { [h .. "/Animal Farm.epub"] = true, [h .. "/Animal Farm (EN-AR).epub"] = true,
+            [h .. "/KOReader UI Redesign Concept.pdf"] = true }
+        LK.cleanup = function() FM().selected_files = nil end
+        FM():showSelectedFilesList()
+    end, wait = 2.5 },
+    { "gl-collfolders", function()
+        LIB.seed()
+        GL.coll(true)
+        FM().collections:showCollFolderList({ name = GL.COLL, text = GL.COLL })
+    end, wait = 2 },
+    { "gl-collfolder", function()
+        LIB.seed()
+        FM().collections:onShowColl(GL.COLL)
+        GL.coll(true)
+        UIManager:scheduleIn(1, function()
+            require("leaf/gapslib").show_folder_sheet(FM().collections, GL.COLL, GL.folders[1])
+        end)
+    end, wait = 3 },
+    { "gl-collstatus", function()
+        LIB.seed()
+        FM().collections:onShowColl(GL.COLL)
+        GL.coll(true)
+        UIManager:scheduleIn(1, function()
+            FM().collections:showCollFilterStatusDialog({ name = GL.COLL, text = GL.COLL })
+        end)
+    end, wait = 3 },
+    { "gl-metafield", function()
+        LIB.seed()
+        local bi = FM().bookinfo
+        -- an edited title (custom metadata), without writing a sidecar
+        bi.custom_doc_settings = { readSetting = function(_s, key)
+            if key == "doc_props" then return { title = "Animal Farm", authors = "George Orwell" } end
+            return { title = "Animal Farm (EN-AR)" }
+        end }
+        LK.cleanup = function() FM().bookinfo.custom_doc_settings = nil end
+        bi:showCustomDialog(home("Animal Farm (EN-AR).epub"), { title = "Animal Farm (EN-AR)", authors = "George Orwell" }, "title")
+    end, wait = 2 },
+    { "gl-metacover", function()
+        LIB.seed()
+        local bi = FM().bookinfo
+        bi.custom_book_cover = GL.cover_image()
+        LK.cleanup = function() FM().bookinfo.custom_book_cover = nil end
+        bi:showCustomDialog(home("Animal Farm.epub"), { title = "Animal Farm" })
+    end, wait = 2 },
+    { "gl-archive", function() GL.archive() end, wait = 2 },
+    { "gl-archmenu", function()
+        local av = GL.archive()
+        UIManager:scheduleIn(1, function() av:showMenu() end)
+    end, wait = 2.5 },
+    { "gl-archsub", function() GL.archive("Issue 1/") end, wait = 2 },
+    { "gl-archfile", function()
+        local av = GL.archive("Issue 1/")
+        UIManager:scheduleIn(0.8, function() av:showFileDialog("Issue 1/page-03.jpg") end)
+    end, wait = 2.5 },
+    { "gl-archextract", function()
+        local av = GL.archive()
+        UIManager:scheduleIn(0.8, function() av:extractAllDialog() end)
+    end, wait = 2.5 },
+    { "gl-archimg", function()
+        local av = GL.archive("Issue 1/")
+        UIManager:scheduleIn(0.8, function() av:viewFile("Issue 1/page-03.jpg") end)
+    end, wait = 3 },
+    { "gl-opds", function() GL.pse() end, wait = 3 },
+    -- end gaps library scenes
     -- system and tools scenes
     { "stats", function()
         local now = os.time()
@@ -772,6 +842,99 @@ function LIB.seed()
             if fm then fm:onRefresh() end
         end)
     end
+end
+
+-- gaps library scenes: helpers
+GL.COLL = "To read this winter"
+-- connected folders + "only add" filters on a collection, in memory only (undone after the shot)
+function GL.coll(on)
+    local RC = require("readcollection")
+    local cs = RC.coll_settings[GL.COLL]
+    if not cs then return end
+    local root = G_reader_settings:readSetting("home_dir"):gsub("/[^/]+$", "")
+    GL.folders = { root .. "/Books/Classics", root .. "/Downloads", root .. "/Books/Philosophy" }
+    cs.folders = { [GL.folders[1]] = { subfolders = true }, [GL.folders[2]] = { scan_on_show = true },
+        [GL.folders[3]] = { subfolders = true, scan_on_show = true } }
+    cs.filter = cs.filter or {}
+    cs.filter.add = { filetype = "epub, pdf", status = { new = true, reading = true } }
+    LK.cleanup = function()
+        cs.folders = nil
+        cs.filter.add = nil
+    end
+end
+-- a comic-like page (panels) as JPEG bytes
+function GL.page_jpeg(seed)
+    local Blitbuffer = require("ffi/blitbuffer")
+    local w, h = 600, 850
+    local bb = Blitbuffer.new(w, h, Blitbuffer.TYPE_BB8)
+    bb:fill(Blitbuffer.COLOR_WHITE)
+    local ink = Blitbuffer.COLOR_BLACK
+    local panels = { { 30, 30, 540, 250 }, { 30, 300, 260, 250 }, { 310, 300, 260, 250 }, { 30, 570, 540, 250 } }
+    for i, p in ipairs(panels) do
+        bb:paintBorder(p[1], p[2], p[3], p[4], 4, ink)
+        local k = (i + (seed or 0)) % 3
+        bb:paintRect(p[1] + 40, p[2] + 60 + k * 30, p[3] - 80, 6, Blitbuffer.COLOR_GRAY_9)
+        bb:paintRect(p[1] + 40, p[2] + 110 + k * 20, math.floor((p[3] - 80) * 0.6), 6, Blitbuffer.COLOR_GRAY_9)
+    end
+    local tmp = os.tmpname()
+    bb:writeJPG(tmp, 80)
+    bb:free()
+    local f = io.open(tmp, "rb")
+    local data = f and f:read("*a")
+    if f then f:close() end
+    os.remove(tmp)
+    return data
+end
+-- the archive: <sandbox>/Downloads/comics-pack.zip (two issues, a cover, a readme), opened in the viewer
+function GL.archive(sub)
+    local root = G_reader_settings:readSetting("home_dir"):gsub("/[^/]+$", "")
+    local dir = root .. "/Downloads"
+    local zip = dir .. "/comics-pack.zip"
+    local lfs = require("libs/libkoreader-lfs")
+    if not lfs.attributes(zip, "mode") then
+        lfs.mkdir(dir)
+        local W = require("ffi/archiver").Writer:new()
+        if W:open(zip, "zip") then
+            W:setZipCompression("store")
+            for i = 1, 9 do W:addFileFromMemory(string.format("Issue 1/page-%02d.jpg", i), GL.page_jpeg(i)) end
+            for i = 1, 8 do W:addFileFromMemory(string.format("Issue 2/page-%02d.jpg", i), GL.page_jpeg(i + 1)) end
+            W:addFileFromMemory("cover.jpg", GL.page_jpeg(0))
+            W:addFileFromMemory("readme.txt", "Comics pack: two issues of The Long Field.\n")
+            W:close()
+        end
+    end
+    local av = FM().archiveviewer
+    av:openFile(zip)
+    if sub and av.booklist then
+        av.booklist.path = sub
+        av.booklist:rebuild()
+    end
+    return av
+end
+-- a custom cover image (the book's own cover, saved as a JPEG next to the sandbox)
+function GL.cover_image()
+    local path = require("datastorage"):getDataDir() .. "/animal-farm-1945.jpg"
+    if not require("libs/libkoreader-lfs").attributes(path, "mode") then
+        local bb = FM().bookinfo:getCoverImage(nil, home("Animal Farm.epub"), true)
+        if bb then
+            bb:writeJPG(path, 85)
+            bb:free()
+        end
+    end
+    return path
+end
+-- OPDS page stream: Kavita-like publication, HTTP stubbed with a local page image
+function GL.pse()
+    local http = require("socket.http")
+    local real = http.request
+    local data = GL.page_jpeg(2)
+    http.request = function(req)
+        if type(req) == "table" and req.sink then req.sink(data) end
+        return 1, 200, {}, "HTTP/1.1 200 OK"
+    end
+    LK.cleanup = function() http.request = real end
+    require("leaf/gapslib").pse_context("The Long Field · Issue 3", "Kavita")
+    require("opdspse"):streamPages("http://leaf.invalid/opds/key/image?page={pageNumber}", 48, false, nil, nil, 12)
 end
 
 -- reader scenes need their book: every scene from "reader" on is an EPUB scene, from "reader-pdf" on a PDF one
