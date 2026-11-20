@@ -337,11 +337,24 @@ function M.apply(L)
         local back = Kit.icon_button("leaf.kb.left", function() self:onClose() end, self)
         local head_h = T.px("h-header")
         local actions = HorizontalGroup:new{ align = "center",
-            Kit.icon_button("leaf.more.v", function()
-                -- KOReader's own book map: its menu, TOC depth, pages per row, overview...
-                UIManager:close(self)
-                UIManager:show(BookMapWidget:new{ ui = ui })
-            end, self),
+            (function()
+                -- ⋮: the Leaf "Book map options" sheet (every item of KOReader's book map menu);
+                -- hold: KOReader's own book map (overview, its gestures)
+                local b = Kit.icon_button("leaf.more.v", function()
+                    local rl = package.loaded["leaf/readerlists"]
+                    if rl and rl.show_map_options then
+                        rl.show_map_options(ui)
+                    else
+                        UIManager:close(self)
+                        UIManager:show(BookMapWidget:new{ ui = ui })
+                    end
+                end, self)
+                b.hold_callback = function()
+                    UIManager:close(self)
+                    UIManager:show(BookMapWidget:new{ ui = ui })
+                end
+                return b
+            end)(),
             Kit.icon_button("leaf.bm.grid", function()
                 UIManager:close(self)
                 ui:handleEvent(Event:new("ShowPageBrowser"))
@@ -433,7 +446,14 @@ function M.apply(L)
                     table.insert(cells, { page = q, read = q < cur, here = q == cur, bm = bm[q], hl = hl[q] })
                 end
                 table.insert(blocks, { h = line_h, w = CellLine:new{ cells = cells, cw = cell_w, ch = cell_h, gap = gap,
-                    width = cw, height = line_h, on_page = function(pg) self:goTo(pg) end } })
+                    width = cw, height = line_h, on_page = function(pg)
+                        if G_reader_settings:nilOrTrue("book_map_tap_to_page_browser") then
+                            UIManager:close(self)
+                            UIManager:show(M.LeafPages:new{ ui = ui, focus = pg, _orig_show = M.orig_page_browser })
+                        else
+                            self:goTo(pg)
+                        end
+                    end } })
                 p = p + per_line
             end
             blocks[#blocks].h = blocks[#blocks].h + T.px("sp-2")
@@ -526,7 +546,8 @@ function M.apply(L)
     local Thumb = InputContainer:extend{ width = 0, height = 0 }
     function Thumb:init()
         self.dimen = geom(self.width, self.height)
-        self.ges_events = { TapThumb = { GestureRange:new{ ges = "tap", range = function() return self.dimen end } } }
+        self.ges_events = { TapThumb = { GestureRange:new{ ges = "tap", range = function() return self.dimen end } },
+            HoldThumb = { GestureRange:new{ ges = "hold", range = function() return self.dimen end } } }
     end
     function Thumb:setTile(tile)
         if self.image then self.image:free() end
@@ -567,6 +588,10 @@ function M.apply(L)
     end
     function Thumb:onTapThumb()
         if self.callback then self.callback() end
+        return true
+    end
+    function Thumb:onHoldThumb()
+        if self.hold_callback then self.hold_callback() end
         return true
     end
     function Thumb:free()
@@ -659,11 +684,28 @@ function M.apply(L)
                 self:rebuild()
             end }
         local right = HorizontalGroup:new{ align = "center", seg,
-            Kit.icon_button("leaf.more.v", function()
-                -- KOReader's own page browser: its menu (rows, columns, page numbers, ribbon, TOC levels...)
-                UIManager:close(self)
-                self._orig_show(ui.thumbnail)
-            end, self),
+            (function()
+                -- ⋮: the Leaf "Page browser options" sheet; hold: KOReader's own page browser
+                local b = Kit.icon_button("leaf.more.v", function()
+                    local rl = package.loaded["leaf/readerlists"]
+                    if rl and rl.show_pages_options then
+                        rl.show_pages_options(ui, function(changed)
+                            if not changed then return end
+                            self.cols = ui.doc_settings:readSetting("page_browser_nb_cols") or self.cols
+                            self.start = nil
+                            self:rebuild()
+                        end)
+                    else
+                        UIManager:close(self)
+                        self._orig_show(ui.thumbnail)
+                    end
+                end, self)
+                b.hold_callback = function()
+                    UIManager:close(self)
+                    self._orig_show(ui.thumbnail)
+                end
+                return b
+            end)(),
             HorizontalSpan:new{ width = T.px("sp-2") } }
 
         -- grid geometry
@@ -684,9 +726,12 @@ function M.apply(L)
         local fixed_h = T.px("h-status") + head_h + T.px("sp-2") + strip_h + pager_h + T.px("hairline")
         local cell_h = th + T.px("sp-1h") + cap_h
         local rows = math.max(1, math.floor((H - fixed_h - T.px("sp-5") + row_gap) / (cell_h + row_gap)))
+        -- KOReader's "Thumbnail rows" (Page browser options) caps what fits
+        local want_rows = ui.doc_settings:readSetting("page_browser_nb_rows")
+        if want_rows and want_rows >= 1 then rows = math.min(rows, want_rows) end
         local per = rows * cols
         self.per = per
-        if not self.start then self.start = math.floor((self.cur - 1) / per) * per + 1 end
+        if not self.start then self.start = math.floor(((self.focus or self.cur) - 1) / per) * per + 1 end
         self.start = math.max(1, math.min(self.start, self.total))
         local last = math.min(self.total, self.start + per - 1)
 
@@ -719,7 +764,16 @@ function M.apply(L)
                     local page = p
                     local here = page == self.cur
                     local th_w = Thumb:new{ width = tw, height = th, here = here, bm = bm[page],
-                        callback = function() self:goTo(page) end }
+                        callback = function() self:goTo(page) end,
+                        hold_callback = function()
+                            local rl = package.loaded["leaf/readerlists"]
+                            if rl and rl.show_page_hold then
+                                rl.show_page_hold(ui, page, function() self:rebuild() end)
+                            else
+                                ui.bookmark:toggleBookmark(page)
+                                self:rebuild()
+                            end
+                        end }
                     table.insert(self.thumbs, th_w)
                     local cap = VerticalGroup:new{ align = "center",
                         TextWidget:new{ text = tostring(page), face = L.face(here and "ui-semibold" or "ui", "fs-sm"),
@@ -808,6 +862,7 @@ function M.apply(L)
         UIManager:setDirty(self.ui.dialog, "full")
     end
 
+    M.orig_page_browser = ReaderThumbnail.onShowPageBrowser
     L.wrap(ReaderThumbnail, "onShowPageBrowser", function(orig, self)
         UIManager:show(LeafPages:new{ ui = self.ui, _orig_show = orig })
         return true

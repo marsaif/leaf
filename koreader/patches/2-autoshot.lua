@@ -207,6 +207,8 @@ end
 local LK = {} -- lookup scenes: helpers, defined below the list
 local LIB = {} -- library scenes: helpers, defined below the list
 local GL = {} -- gaps library scenes: helpers, defined below the list
+local GL = {} -- gaps-lists scenes: helpers, defined below the list
+local STATS = {} -- gaps-lists stats scenes: helpers, defined below the list
 -- desktop has no Wi-Fi hardware: a fake scan result (system and tools scenes)
 function LEAF_FAKE_NETWORKS()
     return {
@@ -939,6 +941,92 @@ local SCENES = {
         show("ui/widget/sortwidget", { title = "Arrange items", item_table = items, callback = noop })
     end, book = "epub" },
     -- end gaps-widgets reader scenes
+    -- gaps-lists scenes (leaf/readerlists.lua: bookmark actions / details / select, search bar, pinned page,
+    -- book map and page browser options, page actions, dictionary menus)
+    { "gp-bm-actions", function() GL.marks() require("leaf/readerlists").show_actions(RUI(), GL.item(false)) end, book = "epub" },
+    { "gp-bm-hl-actions", function() GL.marks() require("leaf/readerlists").show_actions(RUI(), GL.item(true)) end, book = "epub" },
+    { "gp-bm-view", function() GL.marks() RUI().bookmark:showBookmarkDetails(2) end, book = "epub" },
+    { "gp-bm-select", function() GL.marks() require("leaf/readerlists").show_select(RUI(), { [1] = true, [3] = true, [4] = true }) end, book = "epub" },
+    { "gp-search-result", function()
+        local s = RUI().search
+        s.last_search_text = "windmill"
+        s.case_insensitive = true
+        require("ui/trapper"):wrap(function() s:findAllText("windmill") end)
+        UIManager:scheduleIn(2, function()
+            GL.close_to_reader()
+            s:gotoResultsItem(3)
+        end)
+    end, wait = 4, book = "epub" },
+    { "gp-search-bar", function()
+        chapter_one(3)
+        local s = RUI().search
+        s.last_search_text = "windmill"
+        s:onShowSearchDialog("windmill", 0, s.current_search_type, true)
+    end, wait = 2, book = "epub" },
+    { "gp-search-wait", function() chapter_one(3) UIManager:show(require("leaf/readerlists").wait_pill("windmill")) end, book = "epub" },
+    { "gp-goto-pin", function()
+        local ui = RUI()
+        ui.doc_settings:saveSetting("pinned_page", ui.document:getPageXPointer(42))
+        ui.gotopage:onShowGotoDialog()
+    end, book = "epub" },
+    { "gp-goto-unpin", function()
+        -- the pin-off button's confirm, over the Go to sheet
+        RUI().gotopage:onShowGotoDialog()
+        UIManager:show(require("ui/widget/confirmbox"):new{
+            text = "Remove the pinned page?\nPage 42 stays as it is; only the pin is removed.", ok_text = "Remove", ok_callback = noop })
+    end, book = "epub" },
+    { "gp-bookmap-menu", function()
+        RUI().thumbnail:onShowBookMap()
+        UIManager:scheduleIn(1.5, function() require("leaf/readerlists").show_map_options(RUI()) end)
+    end, wait = 4, book = "epub" },
+    { "gp-pb-menu", function()
+        RUI().thumbnail:onShowPageBrowser()
+        UIManager:scheduleIn(2, function() require("leaf/readerlists").show_pages_options(RUI()) end)
+    end, wait = 5, book = "epub" },
+    { "gp-pb-hold", function()
+        local ui = RUI()
+        ui.thumbnail:onShowPageBrowser()
+        UIManager:scheduleIn(2, function() require("leaf/readerlists").show_page_hold(ui, ui:getCurrentPage() + 1) end)
+    end, wait = 5, book = "epub" },
+    { "gp-dict-results", function()
+        GL.dict()
+        UIManager:scheduleIn(0.6, function() GL.top():onShowResultsMenu() end)
+    end, wait = 2, book = "epub" },
+    { "gp-dict-lookup", function()
+        GL.dict()
+        UIManager:scheduleIn(0.6, function() GL.top():onLookupInputWord("silence") end)
+    end, wait = 2, book = "epub" },
+    { "gp-dict-wikilang", function()
+        local ui = RUI()
+        ui.wikipedia:initLanguages("Animal Farm")
+        ui.wikipedia.wiki_languages = { "en", "ar", "fr", "de" }
+        ui.wikipedia:showDict("Animal Farm", {
+            { dict = "Wikipedia EN", word = "Animal Farm", lang = "en", definition =
+                "Animal Farm (originally Animal Farm: A Fairy Story) is a satirical allegorical novella, in the form of a beast fable, by George Orwell, first published in England on 17 August 1945. It tells the story of a group of anthropomorphic farm animals who rebel against their human farmer, hoping to create a society where the animals can be equal, free, and happy." },
+        })
+        UIManager:scheduleIn(0.6, function() require("leaf/readerlists").wiki_lang_menu(GL.top()) end)
+    end, wait = 2, book = "epub" },
+    -- end gaps-lists scenes
+    -- gaps-lists stats scenes (leaf/statpages.lua: the statistics plugin's pages, seeded database)
+    { "gp-stats-book", function() STATS.seed():onShowBookStats() end, wait = 2, book = "epub" },
+    { "gp-stats-cal", function() STATS.seed():onShowCalendarView() end, wait = 2, book = "epub" },
+    { "gp-stats-cal-set", function()
+        STATS.seed():onShowCalendarView()
+        require("leaf/statpages").calendar_settings(UIManager._window_stack[#UIManager._window_stack].widget)
+    end, wait = 2, book = "epub" },
+    { "gp-stats-day", function() STATS.seed():onShowCalendarDayView() end, wait = 2, book = "epub" },
+    { "gp-stats-range", function() STATS.seed():onShowTimeRange() end, wait = 2, book = "epub" },
+    { "gp-stats-week", function() STATS.seed():onShowTimeRange() STATS.tap("Last week") end, wait = 2, book = "epub" },
+    { "gp-stats-months", function() STATS.seed():onShowTimeRange() STATS.tap("Books by month") end, wait = 2, book = "epub" },
+    { "gp-stats-in", function()
+        STATS.seed():onShowTimeRange()
+        STATS.tap("Books by month")
+        STATS.tap(nil, 1)
+    end, wait = 2, book = "epub" },
+    { "gp-stats-days", function() STATS.seed():onShowBookStats() STATS.tap("Days reading this book") end, wait = 2, book = "epub" },
+    { "gp-stats-books", function() STATS.seed():onShowTimeRange() STATS.tap("All books") end, wait = 2, book = "epub" },
+    { "gp-stats-reset", function() STATS.seed():resetPerBook() end, wait = 2, book = "epub" },
+    -- end gaps-lists stats scenes
     -- PDF scenes: replace the EPUB with the PDF, so they run last (reader + typeset tabs)
     { "reader-pdf", function() open_book(PDF_BOOK) end, keep = true, wait = 4, book = "pdf" },
     { "chrome-pdf", function()
@@ -1189,6 +1277,140 @@ function GL.pse()
     LK.cleanup = function() http.request = real end
     require("leaf/gapslib").pse_context("The Long Field · Issue 3", "Kavita")
     require("opdspse"):streamPages("http://leaf.invalid/opds/key/image?page={pageNumber}", 48, false, nil, nil, 12)
+end
+
+-- gaps-lists scenes: helpers
+-- bookmarks (seed_bookmarks) + three highlights, one with a note (once)
+function GL.marks()
+    seed_bookmarks()
+    local ui = RUI()
+    if ui._leaf_gl_marks then return end
+    ui._leaf_gl_marks = true
+    chapter_one(1)
+    local hl = ui.highlight
+    for i, y in ipairs({ 0.30, 0.52, 0.70 }) do
+        LK.select(y, y + 0.02)
+        local index = hl:saveHighlight()
+        hl:clear()
+        local item = index and ui.annotation.annotations[index]
+        if item and i == 2 then item.note = "Old Major's dream" end
+    end
+    chapter_one(3)
+end
+-- the first bookmark (false) or highlight (true)
+function GL.item(highlight)
+    for _i, a in ipairs(RUI().annotation.annotations) do
+        if (a.drawer ~= nil) == highlight then return a end
+    end
+end
+function GL.top() return UIManager._window_stack[#UIManager._window_stack].widget end
+-- close everything above the reader
+function GL.close_to_reader()
+    local stack = UIManager._window_stack
+    while #stack > 0 and stack[#stack].widget ~= RUI() do UIManager:close(stack[#stack].widget) end
+end
+-- the dictionary popup on "silence"
+function GL.dict()
+    local ui = RUI()
+    LK.select(0.30, 0.30, true)
+    ui.dictionary.highlight = ui.highlight
+    ui.dictionary:showDict("silence", {
+        { dict = "Oxford Dictionary of English", word = "silence", definition = "silence (noun)\n1. Complete absence of sound.\n   “the silence of the night”\n2. The fact of abstaining from speech.\n   “she lapsed into silence”" },
+        { dict = "Wiktionary EN→AR (offline)", word = "سكوت", definition = "سكوت، صمت" },
+        { dict = "WordNet 3.1", word = "silences", definition = "(n) silence: the absence of sound" },
+        { dict = "Al-Mawrid Mini", word = "سكوت", definition = "سكوت؛ صمت" },
+    }, LK.word_boxes())
+end
+
+-- gaps-lists stats scenes: helpers
+-- the reader's statistics with a realistic database (idempotent): the open book for the last week
+-- (one day without any reading), several other books this month, earlier books in past months
+function STATS.seed()
+    local ui = RUI()
+    local st = ui and ui.statistics
+    if not st then error("no statistics plugin") end
+    if STATS.seeded then return st end
+    STATS.seeded = true
+    -- calendar settings as the prototype shows them
+    st.settings.calendar_nb_book_spans = 2
+    st.settings.calendar_show_histogram = true
+    st.settings.calendar_browse_future_months = false
+    st.settings.calendar_start_day_of_week = 2
+    st.settings.calendar_day_start_hour = 4
+    st.settings.calendar_day_start_minute = 0
+    st.settings.calendar_use_day_time_shift = true
+    pcall(function() st:insertDB() end)
+    local SQ3 = require("lua-ljsqlite3/init")
+    local conn = SQ3.open(require("datastorage"):getSettingsDir() .. "/statistics.sqlite3")
+    local have = tonumber(conn:rowexec("SELECT count(*) FROM book WHERE md5 LIKE 'leaf-seed-%';")) or 0
+    if have == 0 then
+        local now = os.time()
+        local function q(v) return "'" .. tostring(v):gsub("'", "''") .. "'" end
+        local function at(days_ago, h, m)
+            local d = os.date("*t", now - days_ago * 86400)
+            d.hour, d.min, d.sec = h, m, 0
+            return os.time(d)
+        end
+        local function read(id, total, days_ago, h, m, minutes, page0)
+            local t0 = at(days_ago, h, m)
+            if t0 + minutes * 60 > now - 60 then t0 = now - minutes * 60 - 120 end
+            local n = math.max(1, math.floor(minutes * 60 / 75))
+            for k = 0, n - 1 do
+                conn:exec(string.format("INSERT OR IGNORE INTO page_stat_data VALUES (%d, %d, %d, 75, %d);",
+                    id, (page0 + k) % total + 1, t0 + k * 75, total))
+            end
+            return page0 + n
+        end
+        local function book(title, authors, pages)
+            conn:exec(string.format([[INSERT INTO book (title, authors, notes, last_open, highlights, pages, series, language, md5,
+                total_read_time, total_read_pages) VALUES (%s, %s, 0, %d, 0, %d, '', 'en', %s, 0, 0);]],
+                q(title), q(authors), now - 200 * 86400, pages, q("leaf-seed-" .. title)))
+            return tonumber(conn:rowexec("SELECT max(id) FROM book;")), pages
+        end
+        -- the open book: today (three sessions) and five more days; three days ago nobody read
+        local cur = st.id_curr_book
+        if cur then
+            local total = tonumber(conn:rowexec("SELECT pages FROM book WHERE id = " .. cur .. ";")) or 386
+            local pg = 60
+            pg = read(cur, total, 0, 6, 40, 13, pg)
+            pg = read(cur, total, 0, 7, 5, 9, pg)
+            pg = read(cur, total, 0, 21, 2, 13, pg)
+            for _i, d in ipairs({ { 1, 28 }, { 2, 20 }, { 4, 26 }, { 5, 11 }, { 6, 14 } }) do
+                pg = read(cur, total, d[1], 20, 30, d[2], pg)
+            end
+        end
+        local BOOKS = {
+            { "Siddhartha", "Hermann Hesse", 152, { { 0, 12, 30, 14 }, { 0, 21, 30, 8 }, { 1, 21, 10, 22 } } },
+            { "The Odyssey", "Homer", 541, { { 4, 22, 0, 30 }, { 5, 22, 0, 18 }, { 6, 22, 0, 25 } } },
+            { "Walden", "Henry David Thoreau", 352, { { 9, 21, 0, 35 }, { 10, 21, 0, 28 } } },
+            { "Meditations", "Marcus Aurelius", 254, { { 7, 7, 0, 25 }, { 8, 7, 0, 20 }, { 10, 7, 0, 22 }, { 12, 7, 0, 30 }, { 14, 7, 0, 18 }, { 16, 7, 0, 26 } } },
+            { "Frankenstein", "Mary Shelley", 280, { { 12, 20, 0, 40 }, { 13, 20, 0, 45 }, { 14, 20, 0, 38 }, { 15, 20, 0, 50 }, { 16, 20, 0, 42 }, { 17, 20, 0, 36 }, { 18, 20, 0, 44 } } },
+            { "Dracula", "Bram Stoker", 418, { { 34, 21, 0, 50 }, { 36, 21, 0, 55 }, { 38, 21, 0, 48 }, { 40, 21, 0, 60 } } },
+            { "A Study in Scarlet", "Arthur Conan Doyle", 188, { { 50, 20, 0, 60 }, { 52, 20, 0, 70 }, { 55, 20, 0, 65 } } },
+            { "Pride and Prejudice", "Jane Austen", 432, { { 60, 21, 0, 45 }, { 63, 21, 0, 50 }, { 66, 21, 0, 40 }, { 70, 21, 0, 55 } } },
+            { "Moby-Dick", "Herman Melville", 635, { { 90, 22, 0, 30 }, { 95, 22, 0, 40 }, { 100, 22, 0, 35 } } },
+        }
+        for _i, b in ipairs(BOOKS) do
+            local id, total = book(b[1], b[2], b[3])
+            local pg = 0
+            for _j, s in ipairs(b[4]) do pg = read(id, total, s[1], s[2], s[3], s[4], pg) end
+        end
+        conn:exec([[UPDATE book SET last_open = (SELECT max(start_time) FROM page_stat_data WHERE id_book = book.id)
+            WHERE md5 LIKE 'leaf-seed-%';]])
+    end
+    conn:close()
+    return st
+end
+-- tap a row of the statistics page on top (by the start of its key, or its index)
+function STATS.tap(prefix, index)
+    local kv = RUI().statistics.kv
+    if not (kv and kv.kv_pairs) then return end
+    for i, pr in ipairs(kv.kv_pairs) do
+        if type(pr) == "table" and ((index and i == index) or (prefix and tostring(pr[1]):sub(1, #prefix) == prefix)) then
+            if kv.call then kv:call(i) elseif pr.callback then pr.callback(kv, { kv_pairs_idx = i }) end
+            return
+        end
+    end
 end
 
 -- reader scenes need their book: every scene from "reader" on is an EPUB scene, from "reader-pdf" on a PDF one

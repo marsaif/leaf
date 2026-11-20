@@ -203,8 +203,15 @@ function M.apply(L)
             table.insert(col, VerticalSpan:new{ width = T.px("sp-1") })
             table.insert(col, opts.sub_widget)
         end
-        table.insert(left, col)
         local h = math.max(T.px("h-header"), col:getSize().h + 2 * T.px("sp-2"))
+        if opts.on_title_tap then
+            local sz = col:getSize()
+            col:resetLayout()
+            local Kit = require("leaf/widgets/kit")
+            table.insert(left, Kit.Tap:new{ width = sz.w, height = sz.h, content = col, callback = opts.on_title_tap })
+        else
+            table.insert(left, col)
+        end
         left:resetLayout()
         col:resetLayout()
         return OverlapGroup:new{ dimen = Geom:new{ w = inner, h = h },
@@ -1159,7 +1166,12 @@ function M.apply(L)
             table.insert(right, close)
             local sub = _("From Wikipedia, the free encyclopedia")
             if #(self.results or {}) > 1 then sub = T_(_("%1 · result %2 of %3"), sub, self.dict_index, #self.results) end
-            table.insert(vg, sheet_head(inner, { lead = tile, title = self.displayword or self.lookupword, sub = sub, right = right, lang = self.lang_in }))
+            table.insert(vg, sheet_head(inner, { lead = tile, title = self.displayword or self.lookupword, sub = sub, right = right, lang = self.lang_in,
+                -- tap the title: the Wikipedia language popover (leaf/readerlists.lua)
+                on_title_tap = #(self.wiki_languages or {}) > 1 and function()
+                    local rl = package.loaded["leaf/readerlists"]
+                    if rl and rl.wiki_lang_menu then rl.wiki_lang_menu(self) end
+                end or nil }))
             table.insert(vg, hline(inner))
         else
             ---------------------------------------------------- dictionary head + tabs

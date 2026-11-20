@@ -68,6 +68,10 @@ L.MODULES = {
     "pathchooser",
     "openwith",
     "unlock",
+    -- gaps-lists: statistics pages
+    "statpages",
+    -- gaps-lists: bookmark actions / details / select, search bar, map options, dictionary menus
+    "readerlists",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

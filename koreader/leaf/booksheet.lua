@@ -52,7 +52,8 @@ function M.apply(L)
     function Row:init()
         self.dimen = Geom:new{ x = 0, y = 0, w = self.width, h = self.height }
         self[1] = self.content
-        self.ges_events = { Tap = { GestureRange:new{ ges = "tap", range = function() return self.dimen end } } }
+        self.ges_events = { Tap = { GestureRange:new{ ges = "tap", range = function() return self.dimen end } },
+            Hold = { GestureRange:new{ ges = "hold", range = function() return self.dimen end } } }
     end
     function Row:paintTo(bb, x, y)
         self.dimen.x, self.dimen.y = x, y
@@ -65,6 +66,10 @@ function M.apply(L)
     end
     function Row:onTap()
         if self.callback then self.callback() end
+        return true
+    end
+    function Row:onHold()
+        if self.hold_callback then self.hold_callback() end
         return true
     end
 
@@ -356,7 +361,14 @@ function M.apply(L)
             end
             local xp = ui.rolling and type(item.page) == "string" and (item.pos0 or item.page) or nil
             table.insert(rows, Row:new{ width = inner, height = h, content = content, sep = #rows > 0,
-                callback = function() self:goTo(item, xp) end })
+                callback = function() self:goTo(item, xp) end,
+                -- long-press: the bookmark / highlight actions sheet (leaf/readerlists.lua)
+                hold_callback = function()
+                    local rl = package.loaded["leaf/readerlists"]
+                    if not rl or not rl.show_actions then return end
+                    UIManager:close(self)
+                    rl.show_actions(ui, item)
+                end })
         end
         return rows, nil
     end
