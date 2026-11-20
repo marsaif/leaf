@@ -3,8 +3,10 @@
     bottom navigation (leaf/widgets/bottomnav.lua) of the library screens.
 
       header:   date eyebrow (.ko-eyebrow) + greeting (Playfair --fs-display); search · frontlight · ☰
+      status:   the status strip (wifi · clock · battery), as on every prototype screen
       hero:     .ko-card — cover (tap: book details) · CONTINUE READING eyebrow · title (Playfair) ·
-                author · page x of y · progress + % · time left in book (statistics) ·
+                author · chapter · page x of y · progress + % · time left in book and in the
+                chapter (statistics) ·
                 Resume (primary) · Details (ghost) · ⋮ (the library's long-press book dialog)
       stats:    Today (minutes vs goal, 7-day bars, pages this week, pages/h) · Streak (days, week
                 dots, best streak, books this year) — from the statistics plugin's database
@@ -13,6 +15,8 @@
       nav:      Home (active) · Library · History · Settings
     Data: ReadHistory (last books), BookList / DocSettings (progress, status), PT's cache (title,
     authors, covers). Books open with ReaderUI:showReader().
+    The chapter is not in KOReader's book settings: when the reader saves its settings, Leaf stores
+    the current chapter title and the pages left in it (doc setting "leaf_chapter").
 --]]
 local Device = require("device")
 local Event = require("ui/event")
@@ -120,6 +124,24 @@ end
 ---------------------------------------------------------------- the page
 function M.apply(L)
     local T = L.T
+
+    -- remember the current chapter for the library screens (home hero, book details)
+    local ReaderUI = require("apps/reader/readerui")
+    L.wrap(ReaderUI, "saveSettings", function(orig, self, ...)
+        pcall(function()
+            if not (self.document and self.toc and self.doc_settings) then return end
+            local page = self.getCurrentPage and self:getCurrentPage()
+            if not page then return end
+            local title = self.toc:getTocTitleByPage(page)
+            if title and title ~= "" then
+                local left = self.toc:getChapterPagesLeft(page)
+                self.doc_settings:saveSetting("leaf_chapter", { title = title, left = left, page = page })
+            else
+                self.doc_settings:delSetting("leaf_chapter")
+            end
+        end)
+        return orig(self, ...)
+    end, "ReaderUI:saveSettings (leaf_chapter)")
     local P = require("leaf/widgets/libparts")
     local LeafNav = require("leaf/widgets/bottomnav")
     local IconButton = require("ui/widget/iconbutton")
@@ -206,7 +228,8 @@ function M.apply(L)
 
     -- the current-% badge on a cover (.ko-badge): pill, --on-cover on --cover-scrim
     local function badge(t)
-        local tw = text(t, "ui-semibold", "fs-2xs", "on-cover")
+        local tw = t == "check" and require("leaf/widgets/kit").TintIcon:new{ icon = "leaf.sys.check", size_token = "icon-xs", color = T.color("on-cover") }
+            or text(t, "ui-semibold", "fs-2xs", "on-cover")
         local sz = tw:getSize()
         return FrameContainer:new{ bordersize = 0, background = T.color("cover-scrim"), radius = math.floor(T.px("h-badge") / 2),
             padding = 0, padding_left = P.px(7), padding_right = P.px(7), margin = 0,
@@ -278,7 +301,7 @@ function M.apply(L)
             LeftContainer:new{ dimen = Geom:new{ w = W, h = hh }, HorizontalGroup:new{ HorizontalSpan:new{ width = pad }, head_left } },
             RightContainer:new{ dimen = Geom:new{ w = W, h = hh }, head_right } }
 
-        local body = VerticalGroup:new{ align = "left", VerticalSpan:new{ width = T.px("sp-3") }, header, VerticalSpan:new{ width = T.px("sp-2") } }
+        local body = VerticalGroup:new{ align = "left", require("leaf/widgets/kit").status_strip(W), header, VerticalSpan:new{ width = T.px("sp-2") } }
         local function add(w, gap_after)
             table.insert(body, HorizontalGroup:new{ HorizontalSpan:new{ width = pad }, w })
             table.insert(body, VerticalSpan:new{ width = gap_after or T.px("sp-4") })
@@ -305,9 +328,15 @@ function M.apply(L)
             end
             table.insert(col, VerticalSpan:new{ width = T.px("sp-3") })
             local pct = cur.pct or 0
+            -- .hm-hero-ch: Chapter I · Page 9 of 112
+            local ch_bits = {}
+            if cur.chapter then table.insert(ch_bits, cur.chapter) end
             if cur.pages and cur.pages > 0 then
                 local page = math.max(1, math.floor(pct * cur.pages + 0.5))
-                table.insert(col, text(string.format(_("Page %d of %d"), page, cur.pages), "ui", "fs-sm", "text-3", col_w))
+                table.insert(ch_bits, string.format(_("Page %d of %d"), page, cur.pages))
+            end
+            if #ch_bits > 0 then
+                table.insert(col, text(table.concat(ch_bits, "  ·  "), "ui", "fs-sm", "text-3", col_w))
             end
             table.insert(col, VerticalSpan:new{ width = T.px("sp-2") })
             local pct_t = text(string.format("%d%%", math.floor(pct * 100 + 0.5)), "ui-semibold", "fs-sm", "text")
@@ -318,8 +347,24 @@ function M.apply(L)
             if stats.secs_per_page and cur.pages then
                 local left_pages = math.max(0, cur.pages - math.floor(pct * cur.pages + 0.5))
                 table.insert(col, VerticalSpan:new{ width = T.px("sp-2") })
-                table.insert(col, icon_text("leaf.lib.clock", string.format(_("%s left in book"),
-                    dur(math.max(1, math.floor(left_pages * stats.secs_per_page / 60 + 0.5))))))
+                -- .hm-hero-left: ⏱ time left in book · 🔖 min left in chapter (wraps when too wide)
+                local book_left = icon_text("leaf.lib.clock", string.format(_("%s left in book"),
+                    dur(math.max(1, math.floor(left_pages * stats.secs_per_page / 60 + 0.5)))))
+                local ch_left
+                if cur.chapter_left then
+                    ch_left = icon_text("leaf.lib.bookmark", string.format(_("%d min left in chapter"),
+                        math.max(1, math.floor(cur.chapter_left * stats.secs_per_page / 60 + 0.5))))
+                end
+                if ch_left and book_left:getSize().w + T.px("sp-4") + ch_left:getSize().w <= col_w then
+                    book_left:resetLayout()
+                    table.insert(col, HorizontalGroup:new{ align = "center", book_left, HorizontalSpan:new{ width = T.px("sp-4") }, ch_left })
+                else
+                    table.insert(col, book_left)
+                    if ch_left then
+                        table.insert(col, VerticalSpan:new{ width = T.px("sp-1") })
+                        table.insert(col, ch_left)
+                    end
+                end
             end
             table.insert(col, VerticalSpan:new{ width = T.px("sp-4") })
             local resume = Button:new{ text = "▶  " .. (cur.status == "new" and _("Start") or _("Resume")), _leaf_kind = "primary",
@@ -432,7 +477,7 @@ function M.apply(L)
                 bh = math.max(bh, 1)
                 local info = P.bookInfo(file)
                 local cov = P.coverBox(file, bw, bh, { title = info.title })
-                local b = info.status == "complete" and "✓" or string.format("%d%%", math.floor((info.pct or 0) * 100 + 0.5))
+                local b = info.status == "complete" and "check" or string.format("%d%%", math.floor((info.pct or 0) * 100 + 0.5))
                 local bd = badge(b)
                 local bsz = bd:getSize()
                 local cover_ol = OverlapGroup:new{ dimen = Geom:new{ w = bw, h = bh }, cov,

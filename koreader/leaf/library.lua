@@ -6,6 +6,7 @@
     watcher for PT's module names; KOReader's own modules have different names).
 
     Header (PT's titlebar.lua, the user's customised one; same fields, callbacks and helpers):
+      * the status strip (wifi · clock · battery) on top;
       * title in Playfair SemiBold --fs-display + count in --fs-sm --text-3 (.ko-header .title.display);
       * Lucide icon buttons: search, sort, +, ☰ (main menu) — History: search, ⋮ (filters), ☰;
       * Leaf tabs (.ko-tabs): Library · Favorites · Collections · Folders, active --text medium with a
@@ -348,7 +349,8 @@ local function header_init(L, self)
         LeftContainer:new{ dimen = Geom:new{ w = W, h = hh }, left },
         RightContainer:new{ dimen = Geom:new{ w = W, h = hh }, right },
     }
-    local rows = { row1 }
+    -- the status strip (wifi · clock · battery) above the header, as on every prototype screen
+    local rows = { require("leaf/widgets/kit").status_strip(W), row1 }
 
     if screen == "history" then
         -- row 2: filter chips (.lb-chips)
@@ -726,7 +728,8 @@ function M.apply(L)
                 table.insert(r, HorizontalSpan:new{ width = gap })
                 table.insert(r, cards[i + 1])
             end
-            table.insert(menu.item_group, r)
+            -- full width, left aligned (the item group centres narrower rows)
+            table.insert(menu.item_group, LeftContainer:new{ dimen = Geom:new{ w = W, h = cards[i]:getSize().h }, r })
             table.insert(menu.item_group, VerticalSpan:new{ width = gap })
             table.insert(menu.layout, { cards[i], cards[i + 1] })
         end
@@ -805,6 +808,7 @@ function M.apply(L)
                     for _i, e in ipairs(self.item_table) do
                         if e.is_file or e.file then n = n + 1 end
                     end
+                    tb._leaf_menu = self
                     tb:setCount(n)
                 end
                 return unpack(r)
@@ -1045,11 +1049,14 @@ function M.apply(L)
             -- Folders: "2 folders · 3 files" (.ko-header .count)
             L.wrap(TitleBar, "setCount", function(orig, self, n)
                 local menu = self.show_parent
-                local fc = fm() and fm().file_chooser
+                -- the list this header belongs to (during a reinit, fm().file_chooser is still the old one)
+                local fc = self._leaf_menu or (fm() and fm().file_chooser)
                 if self.leaf_screen ~= "folders" or not (fc and fc.item_table) then return orig(self, n) end
                 local dirs, files = 0, 0
                 for _i, e in ipairs(fc.item_table) do
-                    if e.is_file or e.file then files = files + 1 elseif not e.is_go_up then dirs = dirs + 1 end
+                    if e.is_go_up then -- ".." is not a folder of this one
+                    elseif e.is_file or (e.attr and e.attr.mode == "file") then files = files + 1
+                    elseif (e.attr and e.attr.mode == "directory") or (e.text or ""):match("/$") then dirs = dirs + 1 end
                 end
                 local t = (dirs > 0 and string.format(dirs == 1 and "%d folder · " or "%d folders · ", dirs) or "")
                     .. string.format(files == 1 and "%d file" or "%d files", files)

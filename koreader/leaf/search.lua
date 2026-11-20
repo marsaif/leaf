@@ -58,10 +58,22 @@ function M.apply(L)
     local FrameContainer = require("ui/widget/container/framecontainer")
     local CenterContainer = require("ui/widget/container/centercontainer")
     local LeftContainer = require("ui/widget/container/leftcontainer")
+    local clear_button
 
     -- the search header (.sr-head): ‹ · field (.kb-field--lg: --surface-2, --r-lg, 52px, search icon,
     -- content, trailing) · right button. `content` is the InputText, or a static label on the results page.
     local FIELD_H = Screen:scaleBySize(52 * T.scale) -- .kb-field--lg min-height (raw in the prototype CSS)
+
+    -- .kb-clear: an x in a --h-chip --surface-3 circle (--text-2), in a --hit tap area
+    function clear_button(cb)
+        local c = T.px("h-chip")
+        local hit = T.px("hit")
+        return K.tap(CenterContainer:new{ dimen = K.geom(hit, hit),
+            FrameContainer:new{ bordersize = 0, background = T.color("surface-3"), radius = math.floor(c / 2), padding = 0, margin = 0,
+                CenterContainer:new{ dimen = K.geom(c, c), K.icon("leaf.gl.close", "icon-sm") } } }, cb)
+    end
+
+    -- the search header: the status strip, then .sr-head (← back · field · right button)
     function M.search_head(page, content, trailing, right)
         local W = Screen:getWidth()
         local hit = T.px("hit")
@@ -80,11 +92,12 @@ function M.apply(L)
         }
         local head = HorizontalGroup:new{ align = "center",
             K.hspan("sp-2"),
-            K.icon_button("chevron.left", function() page:onClose() end, page),
+            K.icon_button("leaf.kb.left", function() page:onClose() end, page),
             K.hspan("sp-1"), field, K.hspan("sp-1"),
             right or K.hspan(hit),
         }
-        return CenterContainer:new{ dimen = K.geom(W, fh + 2 * T.px("sp-2")), head }
+        return VerticalGroup:new{ align = "left", require("leaf/widgets/kit").status_strip(W),
+            CenterContainer:new{ dimen = K.geom(W, fh + 2 * T.px("sp-2")), head } }
     end
 
     -- the book's cover thumbnail (.sr-thumb: 44px wide, 2:3)
@@ -155,11 +168,8 @@ function M.apply(L)
         local W = Screen:getWidth()
         local hit = T.px("hit")
         local header = M.search_head(self, self.input,
-            self._has_text and K.icon_button("leaf.sys.clear", function() self:setSearch("") end, self, { size = "icon-sm" }),
-            K.icon_button("leaf.sys.keyboard", function()
-                self.input:toggleKeyboard()
-                UIManager:setDirty(nil, "ui")
-            end, self))
+            self._has_text and clear_button( function() self:setSearch("") end, self, { size = "icon-sm" }),
+            self:kbButton())
 
         local body = VerticalGroup:new{ align = "left", header }
         -- chip rows
@@ -186,7 +196,7 @@ function M.apply(L)
             end, self))
             local chips = {}
             for _i, q in ipairs(list) do
-                table.insert(chips, K.chip{ label = q, icon = "leaf.sys.recent", dim = true,
+                table.insert(chips, K.chip{ label = q, icon = "leaf.sys.recent", dim = true, lg = true,
                     callback = function() self:setSearch(q) end })
             end
             -- two lines of chips at most
@@ -210,6 +220,23 @@ function M.apply(L)
             table.insert(body, w)
         end
         self:frame(body)
+    end
+
+    -- the keyboard toggle (.sr-kbbtn): keyboard icon; while the keyboard is shown, keyboard-off
+    -- pressed in (.ko-icon-btn.on, e-ink: --bw-lg --text ring)
+    function SearchPage:kbButton()
+        local function toggle()
+            self.input:toggleKeyboard()
+            self._kb_on = self.input:isKeyboardVisible()
+            self:rebuild()
+            UIManager:setDirty(nil, "ui")
+        end
+        if self._kb_on == false then return K.icon_button("leaf.sys.keyboard", toggle, self) end
+        local hit = T.px("hit")
+        local bw = T.px("bw-lg")
+        return K.tap(FrameContainer:new{ bordersize = bw, color = T.color("text"), background = T.color("accent-soft"),
+            radius = T.px("r-md"), padding = 0, margin = 0,
+            CenterContainer:new{ dimen = K.geom(hit - 2 * bw, hit - 2 * bw), K.icon("leaf.sys.keyboard-off", "icon-md") } }, toggle)
     end
 
     function SearchPage:onShow()
@@ -746,7 +773,7 @@ function M.apply(L)
                 local n = #g.items
                 local pill_t = K.text(tostring(n), "ui", "fs-xs", "text-2")
                 local ph = pill_t:getSize().h + 2 * T.px("sp-half")
-                local pill = FrameContainer:new{ bordersize = 0, background = T.color("surface-2"), radius = math.floor(ph / 2),
+                local pill = FrameContainer:new{ bordersize = 0, background = T.color("surface-3"), radius = math.floor(ph / 2),
                     padding = 0, padding_left = Screen:scaleBySize(7 * T.scale), padding_right = Screen:scaleBySize(7 * T.scale),
                     CenterContainer:new{ dimen = K.geom(pill_t:getSize().w, ph), pill_t } }
                 local p0, p1 = g.items[1].mandatory, g.items[n].mandatory
@@ -784,7 +811,7 @@ function M.apply(L)
             rs:onShowFulltextSearchInput(q)
         end)
         local header = M.search_head(self, label,
-            K.icon_button("leaf.sys.clear", function()
+            clear_button( function()
                 UIManager:close(self)
                 rs:onShowFulltextSearchInput("")
             end, self, { size = "icon-sm" }),
@@ -866,7 +893,7 @@ function M.apply(L)
             fs:onShowFileSearch(q)
         end)
         local header = M.search_head(self, label,
-            K.icon_button("leaf.sys.clear", function()
+            clear_button( function()
                 UIManager:close(self)
                 fs:onShowFileSearch("")
             end, self, { size = "icon-sm" }),
@@ -892,7 +919,8 @@ function M.apply(L)
         local function section(title, n)
             local pill_t = K.text(tostring(n), "ui", "fs-xs", "text-2")
             local ph = pill_t:getSize().h + 2 * T.px("sp-half")
-            local pill = FrameContainer:new{ bordersize = 0, background = T.color("surface-2"), radius = math.floor(ph / 2),
+            -- .sr-count is --surface-2, which prints as --bg on e-ink: one step darker so it still reads as a pill
+            local pill = FrameContainer:new{ bordersize = 0, background = T.color("surface-3"), radius = math.floor(ph / 2),
                 padding = 0, padding_left = Screen:scaleBySize(7 * T.scale), padding_right = Screen:scaleBySize(7 * T.scale),
                 CenterContainer:new{ dimen = K.geom(pill_t:getSize().w, ph), pill_t } }
             return { widget = LeftContainer:new{ dimen = K.geom(W, T.px("h-control")), HorizontalGroup:new{ align = "center",
@@ -914,12 +942,12 @@ function M.apply(L)
                 local tw_ = T.px("hit")
                 local cover = P.coverBox(it.path, tw_, math.floor(tw_ * 1.5), { title = info.title })
                 local done = info.status == "complete"
-                -- .ko-btn--sm .sr-open: book icon + Resume / Open, hairline, --surface
-                local bl = HorizontalGroup:new{ align = "center", K.icon("leaf.sys.book", "icon-sm"), K.hspan("sp-1h"),
+                -- .ko-btn--sm .sr-open: book icon + Resume / Open, --h-control, --surface-2, hairline --border
+                local bl = HorizontalGroup:new{ align = "center", K.icon("leaf.sys.book", "icon-sm"), K.hspan("sp-2"),
                     K.text((info.pct or 0) > 0 and not done and _("Resume") or _("Open"), "ui-medium", "fs-sm", "text") }
-                local bh = Screen:scaleBySize(36 * T.scale)
+                local bh = T.px("h-control")
                 local btn = K.tap(FrameContainer:new{ bordersize = T.px("hairline"), color = T.color("border"),
-                    background = T.color("surface"), radius = T.px("r-md"), padding = 0,
+                    background = T.color("surface-2"), radius = T.px("r-md"), padding = 0,
                     padding_left = T.px("sp-3"), padding_right = T.px("sp-3"),
                     CenterContainer:new{ dimen = K.geom(bl:getSize().w, bh - 2 * T.px("hairline")), bl } },
                     function() select(it) end)

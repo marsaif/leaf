@@ -416,6 +416,8 @@ return function(L)
             local bits = { d.ext }
             if d.size then table.insert(bits, d.size) end
             if d.pages then table.insert(bits, d.pages .. " p") end
+            local year = P.pubYear(d.file) -- .lb-meta: format · size · pages · year
+            if year then table.insert(bits, year) end
             s_line = text(table.concat(bits, " · "), "ui", "fs-sm", "text-3", mid_w)
         end
         local mid = VerticalGroup:new{ align = "left",
@@ -472,14 +474,16 @@ return function(L)
         local r = row(w, h)
         local side = VerticalGroup:new{ align = "right" }
         local when = d.last and I.when(d.last) or ""
-        table.insert(side, text(when, "ui", "fs-sm", "text-2"))
         local right
         if d.deleted then
+            -- the time right-aligned with the "Remove" label (its tap zone pads it by --sp-2)
+            table.insert(side, HorizontalGroup:new{ text(when, "ui", "fs-sm", "text-2"), HorizontalSpan:new{ width = T.px("sp-2") } })
             table.insert(side, VerticalSpan:new{ width = P.px(5) })
             local rm = text(_("Remove"), "ui-medium", "fs-sm", "accent")
             table.insert(side, Zone:new{ w = rm:getSize().w + 2 * T.px("sp-2"), h = P.px(26), key = "remove", owner = r, content = rm })
             right = HorizontalGroup:new{ align = "center", side, HorizontalSpan:new{ width = T.px("sp-4") } }
         else
+            table.insert(side, text(when, "ui", "fs-sm", "text-2"))
             if d.minleft and d.status ~= "new" then
                 table.insert(side, VerticalSpan:new{ width = P.px(5) })
                 table.insert(side, text(string.format(_("%s left"), I.durShort(d.minleft)), "ui", "fs-sm", "text-3"))
@@ -546,7 +550,8 @@ return function(L)
         for i, k in ipairs(keys) do
             local on = cur == k[1]
             local g = HorizontalGroup:new{ align = "center",
-                on and I.InkIcon:new{ icon = "leaf.lib.check.bold", size = T.px("icon-xs"), color = T.color("accent") } or icon(k[2], "icon-xs"),
+                -- the selected segment keeps its own icon (.ko-seg--icons), in the accent colour
+                on and I.InkIcon:new{ icon = k[2], size = T.px("icon-xs"), color = T.color("accent") } or icon(k[2], "icon-xs"),
                 HorizontalSpan:new{ width = T.px("sp-1h") }, text(k[3], on and "ui-semibold" or "ui", "fs-sm", on and "accent" or "text-2") }
             local bw = on and T.px("bw-md") or 0
             local cell = FrameContainer:new{ bordersize = bw, color = T.color("accent"),

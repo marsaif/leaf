@@ -203,24 +203,33 @@ return function(L)
 
     --------------------------------------------------------------------- chip (.ko-chip)
     -- {label, icon, on, n, callback, hold}
+    -- .ko-chip: --surface-2 fill, --hairline --border; on = --accent-soft + accent ring.
+    -- o.lg = .ko-chip--lg (recent searches): --h-control high, --fs-md --text label, no border.
+    -- o.icon_color (+ o.icon_size, default icon-xs) tints the icon.
     function K.chip(o)
-        local h = T.px("h-chip")
+        local h = T.px(o.lg and "h-control" or "h-chip")
         local hair = T.px("hairline")
-        local bw = o.on and T.px("bw-md") or hair
+        local bw = o.on and T.px("bw-md") or hair -- .ko-chip--lg has no border, but --surface-2 = --bg on e-ink: keep the hairline
         local g = HorizontalGroup:new{ align = "center" }
         if o.icon then
-            table.insert(g, K.icon(o.icon, "icon-sm", not o.on and o.dim))
-            table.insert(g, K.hspan("sp-1h"))
+            if o.icon_color then -- a tinted icon (book details' collection chips: --icon-xs accent)
+                table.insert(g, require("leaf/widgets/kit").TintIcon:new{ icon = o.icon, size_token = o.icon_size or "icon-xs",
+                    color = T.color(o.icon_color) })
+            else
+                table.insert(g, K.icon(o.icon, "icon-sm", not o.on and o.dim))
+            end
+            table.insert(g, K.hspan(o.lg and "sp-2" or "sp-1h"))
         end
-        table.insert(g, K.text(o.label, o.on and "ui-semibold" or "ui-medium", "fs-sm", o.on and "accent" or "text-2"))
+        table.insert(g, K.text(o.label, o.on and "ui-semibold" or (o.lg and "ui" or "ui-medium"), o.lg and "fs-md" or "fs-sm",
+            o.on and "accent" or (o.lg and "text" or "text-2")))
         if o.n ~= nil then
             table.insert(g, K.hspan("sp-1h"))
             table.insert(g, K.text(tostring(o.n), "ui", "fs-2xs", o.on and "accent" or "text-3"))
         end
         local frame = FrameContainer:new{
             bordersize = bw, color = T.color(o.on and "accent" or "border"),
-            background = T.color(o.on and "accent-soft" or "surface"), radius = math.floor(h / 2),
-            padding = 0, padding_left = T.px("sp-3") - bw, padding_right = T.px("sp-3") - bw,
+            background = T.color(o.on and "accent-soft" or "surface-2"), radius = math.floor(h / 2),
+            padding = 0, padding_left = T.px("sp-3") - bw, padding_right = T.px(o.lg and "sp-4" or "sp-3") - bw,
             CenterContainer:new{ dimen = geom(g:getSize().w, h - 2 * bw), g },
         }
         g:resetLayout()
