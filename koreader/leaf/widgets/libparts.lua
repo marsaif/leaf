@@ -7,7 +7,11 @@
       P.cover(file, w, h)                              the book cover (PT's cache first), or nil
       P.coverFrame(widget_or_nil, w, h, title)         --r-cover corners + --border hairline; a
                                                        text cover (.lb-tcover) when there is no image
-      P.bookInfo(file)                                 title, authors, pages, pct, status, md5
+      P.bookInfo(file)                                 title, authors, pages, pct, status, md5,
+                                                       chapter (title of the chapter at the last
+                                                       position), chapter_left (pages left in it)
+      P.language(code)                                 "en" / "eng" / "en-US" -> "English"
+      P.pubYear(file)                                  the EPUB's dc:date year, or nil
 --]]
 local Blitbuffer = require("ffi/blitbuffer")
 local CenterContainer = require("ui/widget/container/centercontainer")
@@ -169,11 +173,81 @@ function P.bookInfo(file)
             out.md5 = ds:readSetting("partial_md5_checksum")
         end)
     end
+    if info.been_opened then
+        -- saved by leaf/home.lua when the reader saves its settings
+        pcall(function()
+            local c = BookList.getDocSettings(file):readSetting("leaf_chapter")
+            if type(c) == "table" and c.title and c.title ~= "" then
+                out.chapter, out.chapter_left = c.title, tonumber(c.left)
+            end
+        end)
+    end
+    if not out.title or out.title == "" or not out.authors or out.authors == "" then
+        -- not in PT's cache yet: the book's metadata, as Book information shows it (no document opening)
+        pcall(function()
+            local f = require("apps/filemanager/filemanager").instance
+            local props = f and f.bookinfo and f.bookinfo:getDocProps(file, nil, true)
+            if props then
+                if not out.title or out.title == "" then out.title = props.display_title or props.title end
+                if not out.authors or out.authors == "" then out.authors = props.authors end
+            end
+        end)
+    end
     if not out.title or out.title == "" then
         out.title = (file:match("([^/]+)$") or file):gsub("%.[^.]+$", "")
     end
     if out.authors then out.authors = out.authors:gsub("\n.*", "") end
     return out
+end
+
+---------------------------------------------------------------- language, publication year
+-- a language code from the book's metadata ("en", "eng", "en-US", "fr_FR") as a name ("English")
+function P.language(code)
+    if not code or code == "" then return code end
+    local ok, name = pcall(function()
+        local Iso = require("ui/data/isolanguage")
+        local c = code:lower():gsub("[-_].*$", "")
+        if #c == 3 then
+            local n = Iso:getLocalizedLanguage(c)
+            if n ~= c then return n end
+        end
+        -- ISO 639-1: reverse KOReader's ISO 639-3 -> BCP 47 table (a local of isolanguage.lua)
+        local fn = Iso.getBCPLanguageTag
+        for i = 1, 20 do
+            local k, v = debug.getupvalue(fn, i)
+            if not k then break end
+            if k == "iso_bcp47_map" and type(v) == "table" then
+                for iso3, bcp in pairs(v) do
+                    if bcp == c then return Iso:getLocalizedLanguage(iso3) end
+                end
+            end
+        end
+    end)
+    return ok and name or code
+end
+
+-- the publication year of an EPUB (its OPF's dc:date); KOReader's metadata has no date
+local year_cache = {}
+function P.pubYear(file)
+    if not file or not file:lower():match("%.epub3?$") then return nil end
+    if year_cache[file] ~= nil then return year_cache[file] or nil end
+    local year = false
+    pcall(function()
+        local Archiver = require("ffi/archiver")
+        local r = Archiver.Reader:new()
+        if not r:open(file) then return end
+        for entry in r:iterate() do
+            if entry.mode == "file" and entry.path:lower():match("%.opf$") then
+                local opf = r:extractToMemory(entry.path)
+                local d = opf and opf:match("<dc:date[^>]*>%s*([^<]*)")
+                year = d and d:match("%d%d%d%d") or false
+                break
+            end
+        end
+        r:close()
+    end)
+    year_cache[file] = year
+    return year or nil
 end
 
 P.Blitbuffer = Blitbuffer

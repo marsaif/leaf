@@ -85,12 +85,16 @@ function M.apply(L)
         local cur = G_reader_settings:readSetting("screensaver_type")
         local actions = {}
         if cur == "cover" and last_file() then
-            local Button = require("ui/widget/button")
-            local b = K.button{ label = _("Preview"), kind = "secondary", parent = self, callback = function() self:preview() end }
-            actions = { { widget = HorizontalGroup:new{ b } } }
+            -- .ko-btn (secondary) with the eye icon; a hairline because --surface-2 = --bg on e-ink
+            local Kit = require("leaf/widgets/kit")
+            local b = Kit.icon_label_button{ icon = "leaf.sys.eye", label = _("Preview"), kind = "secondary",
+                callback = function() self:preview() end }
+            actions = { { widget = HorizontalGroup:new{ require("ui/widget/container/framecontainer"):new{
+                bordersize = T.px("hairline"), color = T.color("border"), radius = T.px("r-md"), padding = 0, margin = 0, b },
+                K.hspan("sp-3") } } } -- + the header's --sp-2 = the --sp-5 page side
         end
         local header = K.header{ width = W, title = _("Sleep screen"), parent = self, back = function() self:onClose() end, actions = actions }
-        local body = VerticalGroup:new{ align = "left", header,
+        local body = VerticalGroup:new{ align = "left", require("leaf/widgets/kit").status_strip(W), header,
             HorizontalGroup:new{ K.hspan("sp-5"), K.textbox(_("Shown while the device sleeps. E-ink keeps the image on screen without using power."),
                 "ui", "fs-sm", "text-2", W - 2 * T.px("sp-5")) },
             K.vspan("sp-4"),
@@ -108,6 +112,17 @@ function M.apply(L)
             local art = t.key == "cover" and cover_widget(last_file(), math.floor(art_h * 0.56), math.floor(art_h * 0.84))
             local art_box = CenterContainer:new{ dimen = K.geom(art_w, art_h),
                 art or K.icon(t.icon, "icon-xl", not enabled) }
+            if on then
+                -- the selected card's check badge (top right of the preview): accent circle, accent-ink check
+                local bs = Screen:scaleBySize(26 * T.scale)
+                local badge = require("ui/widget/container/framecontainer"):new{ bordersize = 0, background = T.color("accent"),
+                    radius = math.floor(bs / 2), padding = 0, margin = 0,
+                    CenterContainer:new{ dimen = K.geom(bs, bs), require("leaf/widgets/kit").TintIcon:new{ icon = "leaf.sys.check",
+                        size_token = "icon-xs", color = T.color("accent-ink") } } }
+                art_box = OverlapGroup:new{ dimen = K.geom(art_w, art_h), art_box,
+                    VerticalGroup:new{ K.vspan("sp-2"), require("ui/widget/container/rightcontainer"):new{ dimen = K.geom(art_w, bs),
+                        HorizontalGroup:new{ badge, K.hspan("sp-2") } } } }
+            end
             local Size = require("ui/size")
             local radio = K.icon(on and "leaf.radio.on" or "leaf.radio.off", "icon-md")
             local tw = art_w - T.px("icon-md") - T.px("sp-2")

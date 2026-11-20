@@ -1271,6 +1271,7 @@ function LIB.seed()
     end
     local books = {
         { f = "/Animal Farm.epub", pct = 0.08, status = "reading", pages = 112, last = at(0, 21, 10),
+          chapter = { title = "Chapter I", left = 4 }, -- leaf/home.lua stores it when the reader saves
           hl = { { "All animals are equal, but some animals are more equal than others.", "The whole book in one line.", "Chapter X", 102 },
                  { "Man is the only creature that consumes without producing.", nil, "Chapter I", 9 } } },
         { f = "/Animal Farm (EN-AR).epub", pct = 1, status = "complete", rating = 5, pages = 140, last = at(2, 22, 30) },
@@ -1283,6 +1284,7 @@ function LIB.seed()
         ds:saveSetting("last_page", math.max(1, math.floor(b.pages * b.pct + 0.5)))
         ds:saveSetting("summary", { status = b.status, rating = b.rating, modified = os.date("%Y-%m-%d", b.last) })
         ds:saveSetting("partial_md5_checksum", require("util").partialMD5(file))
+        if b.chapter then ds:saveSetting("leaf_chapter", b.chapter) end
         if b.hl then
             local ann = {}
             for _j, h in ipairs(b.hl) do

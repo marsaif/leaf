@@ -2,6 +2,7 @@
     Leaf book details (prototype overlay "book-details"): KOReader's "Book information" opens this
     page (a scrolling page, swipe up / down).
 
+      status:  the status strip (wifi · clock · battery)
       header:  ‹ Book details · ♥ favourite · collections · ⋮ (the book-actions sheet)
       hero:    cover · eyebrow (series, else the folder) · title (Playfair --fs-2xl) · author ·
                year · pages · FORMAT · size · language · ★★★★★ rating (tap = rate) ·
@@ -169,14 +170,15 @@ function M.apply(L)
         local _dir, fname = util.splitFilePathName(file)
         local _base, ftype = filemanagerutil.splitFileNameType(fname or "")
         local bits = {}
-        local year = props.pubdate or props.date
+        local year = props.pubdate or props.date or P.pubYear(file)
         year = year and tostring(year):match("%d%d%d%d")
+        local language = props.language and props.language ~= "" and P.language(props.language) or nil
         if year then table.insert(bits, year) end
         local pages = props.pages or info.pages or d.pages
         if pages then table.insert(bits, T_(_("%1 pages"), pages)) end
         if ftype and ftype ~= "" then table.insert(bits, ftype:upper()) end
         if d.size then table.insert(bits, d.size) end
-        if props.language and props.language ~= "" then table.insert(bits, props.language) end
+        if language then table.insert(bits, language) end
         table.insert(col, K.vspan("sp-3"))
         table.insert(col, K.textbox(table.concat(bits, "  ·  "), "ui", "fs-sm", "text-3", col_w))
         -- rating (.lbd-rate): tap a star to rate, the current one again to clear
@@ -213,7 +215,7 @@ function M.apply(L)
             local chips = {}
             for _i, name in ipairs(colls) do
                 local is_fav = name == ReadCollection.default_collection_name
-                table.insert(chips, K.chip{ label = is_fav and _("Favorites") or name, icon = is_fav and "leaf.lib.heart" or "leaf.lib.library",
+                table.insert(chips, K.chip{ label = is_fav and _("Favorites") or name, icon = is_fav and "leaf.lib.heart" or "leaf.lib.library", icon_color = "accent",
                     callback = function()
                         UIManager:close(self)
                         local f = fm()
@@ -233,6 +235,8 @@ function M.apply(L)
         local line, right_txt
         if started and pages then
             line = T_(_("Page %1 of %2"), math.max(1, math.floor((info.percent_finished or 0) * pages + 0.5)), pages)
+            local chapter = P.bookInfo(file).chapter
+            if chapter then line = line .. "  ·  " .. chapter end
         else
             line = _("Not started yet")
         end
@@ -250,7 +254,7 @@ function M.apply(L)
         big:resetLayout()
         local prow = OverlapGroup:new{ dimen = geom(cin, bh),
             LeftContainer:new{ dimen = geom(cin, bh), HorizontalGroup:new{ align = "center", big, K.hspan("sp-3"),
-                K.text(line, "ui", "fs-sm", "text-2", math.floor(cin * 0.45)) } } }
+                K.text(line, "ui", "fs-sm", "text-2", math.floor(cin * 0.55)) } } }
         if right_txt then
             table.insert(prow, RightContainer:new{ dimen = geom(cin, bh), K.text(right_txt, "ui", "fs-sm", "text-3", math.floor(cin * 0.35)) })
         end
@@ -361,7 +365,7 @@ function M.apply(L)
         fact(_("Pages"), pages)
         fact(_("Format"), ftype and ftype:upper())
         fact(_("Size"), d.size)
-        fact(_("Language"), props.language)
+        fact(_("Language"), language)
         fact(_("Publisher"), props.publisher)
         if props.series and props.series ~= "" then
             fact(_("Series"), props.series .. (props.series_index and (" #" .. (tostring(props.series_index):gsub("%.0$", ""))) or ""))
@@ -454,13 +458,19 @@ function M.apply(L)
             VerticalGroup:new{ K.line(W), CenterContainer:new{ dimen = geom(W, foot_h - T.px("hairline")), foot_in } } }
 
         ------------------------------------------------ page: header, scrolling body, footer
-        local body_h = H - hh - foot_h
+        local status_bar = require("leaf/widgets/kit").status_strip(W)
+        local body_h = H - status_bar:getSize().h - hh - foot_h
         local ScrollableContainer = require("ui/widget/container/scrollablecontainer")
-        local scroll = ScrollableContainer:new{ dimen = geom(W, body_h), show_parent = self,
+        -- the prototype page scrolls without a visible scroll bar
+        local scroll = ScrollableContainer:new{ dimen = geom(W, body_h), show_parent = self, scroll_bar_width = 0,
+            paintTo = function(sc, bb, x, y)
+                if sc._v_scroll_bar then sc._v_scroll_bar.enable = false end
+                return ScrollableContainer.paintTo(sc, bb, x, y)
+            end,
             FrameContainer:new{ bordersize = 0, padding = 0, background = T.color("bg"), width = W, content } }
         self.cropping_widget = scroll
         self[1] = FrameContainer:new{ bordersize = 0, padding = 0, background = T.color("bg"), width = W, height = H,
-            VerticalGroup:new{ align = "left", header, scroll, foot } }
+            VerticalGroup:new{ align = "left", status_bar, header, scroll, foot } }
         self.dimen = geom(W, H)
     end
 

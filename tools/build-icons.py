@@ -435,6 +435,9 @@ MAP = {
         "chevrons-right", "file-text", "book-a", "highlighter", "sticky-note", "star", "search", "printer",
     )},
     # -- end gaps reader
+    # -- library polish (p2-library): the search page's keyboard toggle while the keyboard is shown
+    "leaf.sys.keyboard-off": "keyboard-off",
+    # -- end library polish
 }
 
 KEEP_STOCK = {
