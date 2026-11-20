@@ -277,7 +277,7 @@ function Kit.slider_row(o)
     local pad = T.px("sp-5")
     local gap = T.px("sp-2")
     local enabled = o.enabled ~= false
-    local label_w = Screen:scaleBySize(112 * T.scale)
+    local label_w = o.label_w or Screen:scaleBySize(112 * T.scale)
     local is = T.px("icon-sm")
     local step_w = Screen:scaleBySize(36 * T.scale)
     local sp = math.floor((step_w - is) / 2)

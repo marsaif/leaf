@@ -317,6 +317,59 @@ MAP = {
     "leaf.sys.user": "user-round",
     "leaf.sys.titles": "book-copy",
     # -- end lookup and search
+    # -- gaps-lists reader lists (leaf/readerlists.lua: bookmark actions, search bar, pin, map options, dict menus)
+    "leaf.gl.arrow": "arrow-right",
+    "leaf.gl.panel": "panel-top-open",
+    "leaf.gl.note": "notebook-pen",
+    "leaf.gl.textcursor": "text-cursor-input",
+    "leaf.gl.reset": "rotate-ccw",
+    "leaf.gl.palette": "palette",
+    "leaf.gl.listchecks": "list-checks",
+    "leaf.gl.trash": "trash-2",
+    "leaf.gl.highlighter": "highlighter",
+    "leaf.gl.bookmark": "bookmark",
+    "leaf.gl.penline": "pen-line",
+    "leaf.gl.undo": "undo-2",
+    "leaf.gl.first": "chevron-first",
+    "leaf.gl.last": "chevron-last",
+    "leaf.gl.prev": "chevron-left",
+    "leaf.gl.next": "chevron-right",
+    "leaf.gl.firsts": "chevrons-left",
+    "leaf.gl.lasts": "chevrons-right",
+    "leaf.gl.search": "search",
+    "leaf.gl.close": "x",
+    "leaf.gl.loader": "loader-circle",
+    "leaf.gl.pin": "pin",
+    "leaf.gl.pinoff": "pin-off",
+    "leaf.gl.goto": "corner-down-right",
+    "leaf.gl.grid": "layout-grid",
+    "leaf.gl.contrast": "contrast",
+    "leaf.gl.info": "info",
+    "leaf.gl.hand": "hand",
+    "leaf.gl.images": "images",
+    "leaf.gl.file": "file-text",
+    "leaf.gl.bmplus": "bookmark-plus",
+    "leaf.gl.bmminus": "bookmark-minus",
+    "leaf.gl.listplus": "list-plus",
+    "leaf.gl.eyeoff": "eye-off",
+    "leaf.gl.eye": "eye",
+    "leaf.gl.pencil": "pencil",
+    "leaf.gl.settings": "settings-2",
+    "leaf.gl.textsearch": "text-search",
+    "leaf.gl.languages": "languages",
+    "leaf.gl.globe": "globe",
+    "leaf.gl.sliders": "sliders-horizontal",
+    # -- end gaps-lists reader lists
+    # -- gaps-lists stats (leaf/statpages.lua: time range, calendar settings)
+    "leaf.gs.calendar-days": "calendar-days",
+    "leaf.gs.calendar-range": "calendar-range",
+    "leaf.gs.calendar-check": "calendar-check",
+    "leaf.gs.calendar-clock": "calendar-clock",
+    "leaf.gs.calendar-fold": "calendar-fold",
+    "leaf.gs.calendar-plus": "calendar-plus",
+    "leaf.gs.chart": "chart-no-axes-column",
+    "leaf.gs.sunrise": "sunrise",
+    # -- end gaps-lists stats
     # -- menus, dialogs and system (polish): top-menu row icons, one per prototype menus.js ICONS name
     **{f"leaf.mn.{n}": n for n in (
         "a-large-small archive arrow-down-up arrow-left arrow-up-down arrow-up-right battery "
@@ -352,6 +405,25 @@ MAP = {
     "leaf.lib.check.bold": (["check"], {"stroke": "bold"}),
     "leaf.lib.heart.bold": (["heart"], {"stroke": "bold"}),
     # -- end library polish
+    # -- gaps library (select mode, collections folders, book info fields, archive viewer)
+    **{f"leaf.gl.{k}": v for k, v in {
+        "more": "ellipsis-vertical", "filetype": "file-type", "bookcheck": "book-check", "foldertree": "folder-tree",
+        "scansearch": "scan-search", "unlink": "unlink", "sparkles": "sparkles", "pencil": "pencil",
+        "textinput": "text-cursor-input", "filesearch": "file-search", "eye": "eye", "imageplus": "image-plus",
+        "filearchive": "file-archive", "fileimage": "file-image", "packageopen": "package-open", "download": "download",
+        "folderinput": "folder-input", "folderplus": "folder-plus", "x": "x",
+    }.items()},
+    # -- end gaps library
+    # -- gaps-widgets (spinners, date/time, arrange, path chooser, image viewer, keyboard popups,
+    #    clipboard, open with, unlock): leaf.gw.<lucide name>
+    **{f"leaf.gw.{n}": n for n in (
+        "circle-alert clock clock-3 calendar timer keyboard info grip-vertical move-vertical chevrons-up "
+        "chevron-up chevron-down chevrons-down chevron-right arrow-down-a-z arrow-up-z-a arrow-down-1-0 "
+        "arrow-up-1-0 undo-2 corner-left-up folder file file-image file-archive house folder-symlink "
+        "folder-plus x expand shrink rotate-cw camera pin clipboard clipboard-paste copy text type "
+        "text-select trash-2 ellipsis settings-2 book-open-text file-text file-code rotate-ccw list "
+        "pointer plus minus arrow-left captions captions-off hash chevrons-up pointer").split()},
+    # -- end gaps-widgets
     # -- gaps reader (status bar, flipping, links, image viewer, quick menu, screenshot, perception, tweaks)
     **{f"leaf.gr.{n}": n for n in (
         "book-open", "bookmark", "text-select", "loader-circle", "refresh-cw", "link", "globe", "external-link",

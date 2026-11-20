@@ -1,19 +1,33 @@
 --[[
-    Leaf image viewer (prototype overlay "image-viewer", js/screens/gaps.js): ImageViewer for covers,
-    images in books, screenshots, archives and OPDS page streaming. The shared restyle lives here;
-    callers add their specifics through M.next (consumed by the next ImageViewer:new):
-        M.next = { title, sub, paper = true (the image sits on a --page card), ring = true (a hairline
-                   around the image), fullscreen = true, no_save = true }
+    Leaf image viewer (prototype overlay "image-viewer", js/screens/gaps.js + css/gaps.css): KOReader's
+    ImageViewer for covers, images in books, screenshots, archives and OPDS page streaming, always a
+    full page on --bg. This module is the only owner of ImageViewer's methods; callers add their
+    specifics through M.next (consumed by the next ImageViewer:new; set it right before the call that
+    opens the viewer and clear it after, in case no viewer opened):
+        M.next = {
+            title    = the title line (else the caller's title_text),
+            sub      = the --fs-xs --text-3 line under it (self._leaf_sub),
+            names    = per-image titles of an image list (the title follows when flipping),
+            paper    = true: the image sits on a --page card (book images, archive pages, page streams),
+            ring     = true: a hairline around the image (screenshots),
+            controls = true: open with the controls shown,
+            no_save  = true: no "Save view" tool,
+            fullscreen = true (accepted for callers; the viewer is always full page),
+        }
+    Book information › cover opens with the controls, the book's title and "Cover image · author".
 
       controls shown:   status strip · top bar (× · title / sub · caption toggle) with a hairline under it
-                        stage (--sp-6 around the image; book images on a --page card, --r-sm, --sp-4 padding)
+                        stage (--sp-6 around the image; paper images on a --page card, --r-sm, --sp-4 padding)
                         caption (--fs-sm --text-2, centred) when there is one and it is shown
                         foot on --bg-raised: "3 / 24" + thin progress (image lists), then tools
-                        (.ko-tool: Original size / Fit to screen · Rotate / No rotation · Save view)
+                        (.ko-tool: Original size / Fit to screen · Rotate / No rotation · Go to page (lists)
+                        · Save view)
       controls hidden:  the image (--sp-2 around it) and the hint "Tap to show the controls · pinch to zoom"
+                        (image lists: "Tap the sides for the previous or next image · …")
 
-    KOReader's viewer keeps zoom, pan, rotation, image lists, keys and Save view; a tap still toggles the
-    controls (KOReader's buttons_visible). A viewer opened with a title bar starts with its controls shown.
+    KOReader's viewer keeps zoom, pan, rotation, image lists, keys and Save view; a tap on the stage still
+    toggles the controls (KOReader's buttons_visible), the sides of an image list step through it. A viewer
+    opened with a title bar starts with its controls shown.
 --]]
 local CenterContainer = require("ui/widget/container/centercontainer")
 local FrameContainer = require("ui/widget/container/framecontainer")
@@ -74,7 +88,7 @@ function M.apply(L)
         right:resetLayout()
         local lw = T.px("sp-2") + close:getSize().w + T.px("sp-2")
         local tw = W - lw - rw
-        local col = VerticalGroup:new{ align = "left", K.text(self._leaf_title or self.title_text or _("Image"), "ui-semibold", "fs-head", "text", tw) }
+        local col = VerticalGroup:new{ align = "left", K.text(self.title_text or _("Image"), "ui-semibold", "fs-head", "text", tw) }
         local sub = self._leaf_sub
         if sub and sub ~= "" then
             table.insert(col, K.vspan("sp-half"))
@@ -86,6 +100,25 @@ function M.apply(L)
             LeftContainer:new{ dimen = geom(W, h), HorizontalGroup:new{ align = "center", K.hspan("sp-2"), close, K.hspan("sp-2"), col } },
             RightContainer:new{ dimen = geom(W, h), right } }
         return VerticalGroup:new{ band(W, h, "bg", bar), K.line(W) }, h + hair
+    end
+
+    local function go_to_image(self)
+        local InputDialog = require("ui/widget/inputdialog")
+        local nb = self._images_list_nb
+        local d
+        d = InputDialog:new{ title = _("Go to image"), input_hint = string.format("1 – %d", nb), input_type = "number",
+            buttons = { {
+                { text = _("Cancel"), id = "close", callback = function() UIManager:close(d) end },
+                { text = _("Go"), is_enter_default = true, callback = function()
+                    local n = tonumber(d:getInputText())
+                    if n and n >= 1 and n <= nb then
+                        UIManager:close(d)
+                        self:switchToImageNum(math.floor(n))
+                    end
+                end },
+            } } }
+        UIManager:show(d)
+        d:onShowKeyboard()
     end
 
     local function foot(self, W)
@@ -110,6 +143,9 @@ function M.apply(L)
         table.insert(tools, { self._scale_to_fit and "leaf.gr.expand" or "leaf.gr.shrink",
             self._scale_to_fit and _("Original size") or _("Fit to screen"), function() if scale_b then scale_b.callback() end end })
         table.insert(tools, { "leaf.gr.rotate-cw", self.rotated and _("No rotation") or _("Rotate"), function() if rot_b then rot_b.callback() end end })
+        if self._images_list and (self._images_list_nb or 0) > 1 then
+            table.insert(tools, { "leaf.gr.hash", _("Go to page"), function() go_to_image(self) end })
+        end
         if not self._leaf_no_save then
             table.insert(tools, { "leaf.gr.camera", _("Save view"), function() self:onSaveImageView() end })
         end
@@ -147,10 +183,12 @@ function M.apply(L)
         local nx = M.next
         if nx then
             M.next = nil
-            self._leaf_title, self._leaf_sub, self._leaf_paper, self._leaf_no_save = nx.title, nx.sub, nx.paper, nx.no_save
-            self._leaf_ring = nx.ring
-            if nx.fullscreen then self.fullscreen = true end
+            self._leaf_sub, self._leaf_names = nx.sub, nx.names
+            self._leaf_paper, self._leaf_ring, self._leaf_no_save = nx.paper, nx.ring, nx.no_save
+            self.title_text = nx.title or (nx.names and nx.names[1]) or self.title_text
+            if nx.controls then self.buttons_visible = true end
         end
+        self.fullscreen = true
         if self.with_title_bar and not self.buttons_visible then self.buttons_visible = true end
         self._leaf = true
         return orig(self, ...)
@@ -160,11 +198,8 @@ function M.apply(L)
         if not self._leaf then return orig(self) end
         self:_clean_image_wg()
         local orig_dimen = self.main_frame.dimen
-        if self.fullscreen then
-            self.height, self.width = Screen:getHeight(), Screen:getWidth()
-        else
-            self.height, self.width = Screen:getHeight() - Screen:scaleBySize(40), Screen:getWidth() - Screen:scaleBySize(40)
-        end
+        self.fullscreen = true -- (a full page; KOReader's Save view toggles it too)
+        self.height, self.width = Screen:getHeight(), Screen:getWidth()
         local W, H = self.width, self.height
         while table.remove(self.frame_elements) do end
         self.frame_elements:resetLayout()
@@ -172,10 +207,8 @@ function M.apply(L)
         local above, below = {}, {}
         local top_h, bottom_h = 0, 0
         if ui then
-            if self.fullscreen then
-                table.insert(above, band(W, T.px("h-status"), "bg", Kit.status_strip(W)))
-                top_h = top_h + T.px("h-status")
-            end
+            table.insert(above, band(W, T.px("h-status"), "bg", Kit.status_strip(W)))
+            top_h = top_h + T.px("h-status")
             local bar, bh = top_bar(self, W)
             table.insert(above, bar)
             top_h = top_h + bh
@@ -219,7 +252,7 @@ function M.apply(L)
         self.frame_elements:resetLayout()
         self._leaf_stage_y = { top_h, top_h + self.img_container_h }
         self.main_frame.background = T.color("bg")
-        self.main_frame.radius = not self.fullscreen and T.px("r-lg") or nil
+        self.main_frame.radius = nil
         local wfm_mode = Device:hasKaleidoWfm() and "partial" or "ui"
         self.dithered = true
         UIManager:setDirty(self, function()
@@ -256,6 +289,28 @@ function M.apply(L)
         if not ok then error(ret, 0) end
         return ret
     end, "ImageViewer:onSaveImageView")
+
+    -- image lists with per-image titles (archives): the title follows the image
+    L.wrap(ImageViewer, "switchToImageNum", function(orig, self, n, ...)
+        local name = self._leaf_names and self._leaf_names[n]
+        if name then self.title_text = name end
+        return orig(self, n, ...)
+    end, "ImageViewer:switchToImageNum")
+
+    -- Book information › cover: open with the controls, named after the book
+    local BookInfo = require("apps/filemanager/filemanagerbookinfo")
+    L.wrap(BookInfo, "onShowBookCover", function(orig, self, file, force_orig)
+        pcall(function()
+            local props = self:getDocProps(file or (self.document and self.document.file))
+            local author = props and props.authors and props.authors:gsub("[\n;].*", "") or nil
+            M.next = { title = props and (props.display_title or props.title), controls = true,
+                sub = _("Cover image") .. (author and author ~= "" and (" · " .. author) or "") }
+        end)
+        local ok, ret = pcall(orig, self, file, force_orig)
+        M.next = nil
+        if not ok then error(ret, 0) end
+        return ret
+    end, "BookInfo:onShowBookCover")
 end
 
 return M

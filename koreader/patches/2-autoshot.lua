@@ -103,8 +103,112 @@ local function ts_open(key, after)
 end
 local noop = function() end
 
+-- gaps-widgets helpers
+local GW = {} -- gaps-widgets scenes: helpers
+function GW.arrange(sel)
+    local items = {}
+    for _i, t in ipairs({ "Favorites", "To read this winter", "Sherlock Holmes", "Arabic", "Poetry", "Book club", "Philosophy", "Comics" }) do
+        table.insert(items, { text = t })
+    end
+    local w = require("ui/widget/sortwidget"):new{ title = "Arrange collections", item_table = items, callback = noop }
+    UIManager:show(w)
+    if sel then
+        w.marked = sel
+        w:_populateItems()
+    end
+    return w
+end
+
+-- the read timer's DateTimeWidget, with its check boxes (readtimer.koplugin addCheckboxes)
+function GW.timer(kind)
+    local CheckButton = require("ui/widget/checkbutton")
+    local w = require("ui/widget/datetimewidget"):new(kind == "alarm"
+        and { hour = 22, min = 30, ok_text = "Set alarm", title_text = "Alarm", info_text = "Enter a time in hours and minutes.", callback = noop }
+        or { hour = 0, min = 20, hour_max = 17, ok_text = "Start timer", title_text = "Interval", info_text = "Enter a time in hours and minutes.", callback = noop })
+    if kind ~= "alarm" then w:addWidget(CheckButton:new{ text = "Auto-reschedule", checked = false, parent = w, callback = noop }) end
+    w:addWidget(CheckButton:new{ text = "Show timer in alt status bar", checked = false, parent = w, callback = noop })
+    w:addWidget(CheckButton:new{ text = "Show timer in status bar", checked = true, parent = w, callback = noop })
+    UIManager:show(w)
+end
+
+-- a small fake device tree for the path chooser: <data dir>/onboard/{Downloads, Pictures/Covers, …}
+function GW.onboard()
+    local lfs = require("libs/libkoreader-lfs")
+    local root = require("datastorage"):getDataDir() .. "/onboard"
+    local function dir(p) lfs.mkdir(root .. (p ~= "" and ("/" .. p) or "")) end
+    local function file(p, kb)
+        local f = io.open(root .. "/" .. p, "rb")
+        if f then f:close() return end
+        f = io.open(root .. "/" .. p, "wb")
+        if f then f:write(string.rep("x", math.floor(kb * 1024))) f:close() end
+    end
+    for _i, d in ipairs({ "", "Books", "Downloads", "Downloads/Comics", "Downloads/Articles", "Pictures", "Pictures/Covers",
+        "Screenshots", "Documents" }) do dir(d) end
+    for i = 1, 10 do file("Downloads/Comics/issue-" .. i .. ".cbz", 1) end
+    for i = 1, 12 do file("Downloads/Articles/article-" .. i .. ".html", 1) end
+    file("Downloads/comics-pack.zip", 480) file("Downloads/The Odyssey.epub", 120) file("Downloads/receipt.pdf", 88)
+    file("Pictures/Covers/animal-farm-1945.jpg", 286) file("Pictures/Covers/animal-farm-penguin.jpg", 302)
+    file("Pictures/Covers/moby-dick.png", 540)
+    return root
+end
+
+-- an input dialog with its keyboard, then a long-press on one of its keys (by key or label)
+function GW.hold_key(title, input, which)
+    local d
+    d = require("ui/widget/inputdialog"):new{ title = title, input = input, input_hint = title == "Search" and "Title, author, text…" or nil,
+        buttons = {{ { text = "Cancel", id = "close", callback = function() UIManager:close(d) end },
+            { text = "Save", is_enter_default = true, callback = noop } }} }
+    UIManager:show(d)
+    d:onShowKeyboard()
+    UIManager:scheduleIn(0.4, function()
+        local kb = d._input_widget and d._input_widget.keyboard
+        for _i, row in ipairs(kb and kb.layout or {}) do
+            for _j, key in ipairs(row) do
+                if (key.key == which or key.label == which) and key.hold_callback then key.hold_callback() return end
+            end
+        end
+    end)
+end
+
+-- a note field with a few clipboard snippets (InputText's clipboard settings, as KOReader saves them)
+function GW.note_field()
+    local IT = require("ui/widget/inputtext")
+    if IT.clipboard_settings then
+        IT.clipboard_settings.snippets = {
+            { name = "Signature", text = "— sent from my e-reader" },
+            { text = "Remember to return this book to the library." },
+            { name = "Book club", text = "Book club · Thursday 19:00 · chapters 4–6" },
+            { name = "Address", text = "12 Rue des Lilas, Lyon" },
+        }
+    end
+    pcall(function() require("device").input.setClipboardText("the creatures outside looked from pig to man") end)
+    local d
+    d = require("ui/widget/inputdialog"):new{ title = "Add a note", input = "The windmill was finished at last, and the animals",
+        buttons = {{ { text = "Cancel", id = "close", callback = function() UIManager:close(d) end },
+            { text = "Save", is_enter_default = true, callback = noop } }} }
+    UIManager:show(d)
+    d:onShowKeyboard()
+    return d._input_widget
+end
+
+-- the sleep screen, then its lock prompt (ScreenSaverLockWidget), with or without an exit gesture
+function GW.unlock(gesture)
+    local ss = require("ui/screensaver")
+    pcall(function() ss:setup() ss:show() end)
+    UIManager:scheduleIn(0.6, function()
+        local w = require("ui/widget/screensaverlockwidget"):new{ ui = FM() }
+        w.has_exit_screensaver_gesture = gesture
+        if gesture then w.ui = { gestures = { gestures = { swipe_north = { exit_screensaver = true } } } } end
+        w:showWaitForGestureMessage()
+    end)
+    UIManager:scheduleIn(2.2, function() pcall(function() ss:close_widget() ss:cleanup() end) end)
+end
+
 local LK = {} -- lookup scenes: helpers, defined below the list
 local LIB = {} -- library scenes: helpers, defined below the list
+local GL = {} -- gaps library scenes: helpers, defined below the list
+local GL = {} -- gaps-lists scenes: helpers, defined below the list
+local STATS = {} -- gaps-lists stats scenes: helpers, defined below the list
 local GR = {} -- gaps reader scenes: helpers, defined below the list
 -- desktop has no Wi-Fi hardware: a fake scan result (system and tools scenes)
 function LEAF_FAKE_NETWORKS()
@@ -314,6 +418,75 @@ local SCENES = {
         local ok, catalog = pcall(require, "leaf/catalog")
         if ok then catalog.show() else logger.info("autoshot: no leaf/catalog yet") end
     end },
+    -- gaps library scenes (leaf/gapslib.lua): select mode list, connected folders, metadata fields,
+    -- archive viewer (a test archive made in the sandbox), OPDS page stream (stubbed HTTP)
+    { "gl-selfiles", function()
+        LIB.seed()
+        local h = G_reader_settings:readSetting("home_dir")
+        FM().selected_files = { [h .. "/Animal Farm.epub"] = true, [h .. "/Animal Farm (EN-AR).epub"] = true,
+            [h .. "/KOReader UI Redesign Concept.pdf"] = true }
+        LK.cleanup = function() FM().selected_files = nil end
+        FM():showSelectedFilesList()
+    end, wait = 2.5 },
+    { "gl-collfolders", function()
+        LIB.seed()
+        GL.coll(true)
+        FM().collections:showCollFolderList({ name = GL.COLL, text = GL.COLL })
+    end, wait = 2 },
+    { "gl-collfolder", function()
+        LIB.seed()
+        FM().collections:onShowColl(GL.COLL)
+        GL.coll(true)
+        UIManager:scheduleIn(1, function()
+            require("leaf/gapslib").show_folder_sheet(FM().collections, GL.COLL, GL.folders[1])
+        end)
+    end, wait = 3 },
+    { "gl-collstatus", function()
+        LIB.seed()
+        FM().collections:onShowColl(GL.COLL)
+        GL.coll(true)
+        UIManager:scheduleIn(1, function()
+            FM().collections:showCollFilterStatusDialog({ name = GL.COLL, text = GL.COLL })
+        end)
+    end, wait = 3 },
+    { "gl-metafield", function()
+        LIB.seed()
+        local bi = FM().bookinfo
+        -- an edited title (custom metadata), without writing a sidecar
+        bi.custom_doc_settings = { readSetting = function(_s, key)
+            if key == "doc_props" then return { title = "Animal Farm", authors = "George Orwell" } end
+            return { title = "Animal Farm (EN-AR)" }
+        end }
+        LK.cleanup = function() FM().bookinfo.custom_doc_settings = nil end
+        bi:showCustomDialog(home("Animal Farm (EN-AR).epub"), { title = "Animal Farm (EN-AR)", authors = "George Orwell" }, "title")
+    end, wait = 2 },
+    { "gl-metacover", function()
+        LIB.seed()
+        local bi = FM().bookinfo
+        bi.custom_book_cover = GL.cover_image()
+        LK.cleanup = function() FM().bookinfo.custom_book_cover = nil end
+        bi:showCustomDialog(home("Animal Farm.epub"), { title = "Animal Farm" })
+    end, wait = 2 },
+    { "gl-archive", function() GL.archive() end, wait = 2 },
+    { "gl-archmenu", function()
+        local av = GL.archive()
+        UIManager:scheduleIn(1, function() av:showMenu() end)
+    end, wait = 2.5 },
+    { "gl-archsub", function() GL.archive("Issue 1/") end, wait = 2 },
+    { "gl-archfile", function()
+        local av = GL.archive("Issue 1/")
+        UIManager:scheduleIn(0.8, function() av:showFileDialog("Issue 1/page-03.jpg") end)
+    end, wait = 2.5 },
+    { "gl-archextract", function()
+        local av = GL.archive()
+        UIManager:scheduleIn(0.8, function() av:extractAllDialog() end)
+    end, wait = 2.5 },
+    { "gl-archimg", function()
+        local av = GL.archive("Issue 1/")
+        UIManager:scheduleIn(0.8, function() av:viewFile("Issue 1/page-03.jpg") end)
+    end, wait = 3 },
+    { "gl-opds", function() GL.pse() end, wait = 3 },
+    -- end gaps library scenes
     -- system and tools scenes
     { "stats", function()
         local now = os.time()
@@ -401,6 +574,128 @@ local SCENES = {
     end },
     -- end polish-ui scenes
     -- end system and tools scenes
+    -- gaps-widgets scenes (library side: spinners, date/time, arrange, path chooser, image viewer,
+    -- keyboard popups, clipboard, open with, unlock)
+    { "gw-spin-items", function()
+        local w = require("ui/widget/spinwidget"):new{ title_text = "Items per page", value = 14, value_min = 6,
+            value_max = 30, default_value = 14, keep_shown_on_apply = true, callback = noop }
+        UIManager:show(w)
+        -- the prototype state: moved to 16 (Apply enabled)
+        w.value_widget.value = 16
+        w.value_widget:update()
+    end },
+    { "gw-number-err", function()
+        local w = require("ui/widget/spinwidget"):new{ title_text = "Items per page", value = 14, value_min = 6,
+            value_max = 30, default_value = 14, keep_shown_on_apply = true, callback = noop }
+        UIManager:show(w)
+        local d = require("leaf/picker").enter_number(w.value_widget)
+        d._input_widget:setText("42")
+        local row = d.button_table.buttons_layout[#d.button_table.buttons_layout]
+        row[#row].callback()
+    end, wait = 2 },
+    { "gw-spin2-grid", function() show("ui/widget/doublespinwidget", {
+        title_text = "Portrait cover grid mode", width_factor = 0.6,
+        left_text = "Columns", left_value = 3, left_min = 2, left_max = 4, left_default = 3, left_precision = "%01d",
+        right_text = "Rows", right_value = 3, right_min = 2, right_max = 4, right_default = 3, right_precision = "%01d",
+        keep_shown_on_apply = true, callback = noop }) end },
+    { "gw-spin-listmodes", function() show("ui/widget/spinwidget", {
+        title_text = "List modes", value = 7, value_min = 3, value_max = 10, default_value = 7,
+        keep_shown_on_apply = true, callback = noop }) end },
+    { "gw-dt-daystart", function() show("ui/widget/datetimewidget", {
+        hour = 4, min = 0, min_max = 50, min_step = 10, min_hold_step = 30, ok_text = "Set time",
+        title_text = "Daily timeline starts at", info_text = "Set the time when the daily timeline should start.",
+        callback = noop }) end },
+    { "gw-dt-suspend", function() show("ui/widget/datetimewidget", {
+        hour = 1, min = 0, hour_max = 23, min_max = 59, hour_hold_step = 5, min_hold_step = 10,
+        ok_text = "Set timeout", title_text = "Timeout for autosuspend", info_text = "Enter time in hours and minutes.",
+        default_value = "1h 0m", default_callback = noop, extra_text = "Disable", extra_callback = noop,
+        callback = noop }) end },
+    { "gw-arrange-coll", function() GW.arrange() end },
+    { "gw-arrange-sel", function() GW.arrange(3) end },
+    { "gw-arrange-menu", function()
+        local w = GW.arrange()
+        UIManager:scheduleIn(0.3, function() w:onShowWidgetMenu() end)
+    end },
+    { "gw-arrange-books", function()
+        local items = {}
+        for _i, t in ipairs({ "Walden", "Crime and Punishment", "Jane Eyre", "Middlemarch", "Little Women", "Siddhartha", "The Odyssey" }) do
+            table.insert(items, { text = t })
+        end
+        -- inside the collection, so the page names it
+        local RC = require("readcollection")
+        if not RC.coll["To read this winter"] then RC:addCollection("To read this winter") end
+        pcall(function() FM().collections:onShowColl("To read this winter") end)
+        UIManager:scheduleIn(0.5, function()
+            show("ui/widget/sortwidget", { title = "Arrange books in collection", item_table = items, callback = noop })
+        end)
+    end, wait = 2 },
+    { "gw-path-folder", function()
+        local root = GW.onboard()
+        require("ui/downloadmgr"):new{ onConfirm = noop }:chooseDir(root .. "/Downloads")
+    end },
+    { "gw-path-file", function()
+        local root = GW.onboard()
+        LIB.seed()
+        FM().bookinfo:setCustomCover(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+        local top = UIManager._window_stack[#UIManager._window_stack].widget
+        if top.changeToPath then top:changeToPath(root .. "/Pictures/Covers") end
+    end },
+    { "gw-path-confirm", function()
+        local root = GW.onboard()
+        local pc = require("ui/widget/pathchooser"):new{ select_directory = false, path = root .. "/Pictures/Covers",
+            file_filter = function(f) return require("document/documentregistry"):isImageFile(f) end, onConfirm = noop }
+        UIManager:show(pc)
+        pc:onMenuHold({ path = root .. "/Pictures/Covers/animal-farm-1945.jpg" })
+    end },
+    { "gw-iv-cover", function()
+        LIB.seed()
+        FM().bookinfo:onShowBookCover(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+    end, wait = 2 },
+    { "gw-iv-rot", function()
+        LIB.seed()
+        FM().bookinfo:onShowBookCover(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+        local top = UIManager._window_stack[#UIManager._window_stack].widget
+        top.rotated = true
+        top.scale_factor, top._scale_to_fit = 1, false
+        top:update()
+    end, wait = 2 },
+    { "gw-keypopup", function() GW.hold_key("Rename collection", "Café readi", "e") end, wait = 2 },
+    { "gw-kblayouts", function()
+        G_reader_settings:saveSetting("keyboard_layouts", { "en", "ar", "fr" })
+        G_reader_settings:saveSetting("keyboard_layout_default", "en")
+        GW.hold_key("Search", "", "🌐")
+    end, wait = 2 },
+    { "gw-clipboard", function()
+        local it = GW.note_field()
+        UIManager:scheduleIn(0.4, function() it:holdTextBox() end)
+    end, wait = 2 },
+    { "gw-snippets", function()
+        local it = GW.note_field()
+        UIManager:scheduleIn(0.4, function() it:showClipboardSnippets() end)
+    end, wait = 2 },
+    { "gw-snippet-edit", function()
+        local it = GW.note_field()
+        UIManager:scheduleIn(0.4, function() it:editClipboardSnippet(3) end)
+    end, wait = 2 },
+    { "gw-openwith", function()
+        LIB.seed()
+        FM():showOpenWithDialog(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+    end },
+    { "gw-openwith-confirm", function()
+        LIB.seed()
+        FM():showOpenWithDialog(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+        local d = UIManager._window_stack[#UIManager._window_stack].widget
+        for _i, row in ipairs(d.radio_button_table.radio_buttons_layout) do
+            for _j, b in ipairs(row) do
+                if b.provider and b.provider.provider == "mupdf" then d.radio_button_table:checkButton(b) end
+            end
+        end
+        d._check_global_button:toggleCheck()
+        if d._leaf_open then d._leaf_open() end
+    end },
+    { "gw-unlock", function() LIB.seed() GW.unlock(true) end, wait = 2 },
+    { "gw-unlock-tap", function() LIB.seed() GW.unlock(false) end, wait = 2 },
+    -- end gaps-widgets scenes
     -- reader scenes replace the file manager: keep them last
     -- every EPUB reader scene runs on the bilingual Animal Farm (book = "epub": opened first if needed)
     { "reader", function()
@@ -616,6 +911,123 @@ local SCENES = {
             ui:handleEvent(require("ui/event"):new("SetLineSpace", before))
         end)
     end) end },
+    -- gaps-widgets reader scenes (spinners, timers and status bar items opened from the reader)
+    { "gw-spin-battery", function() show("ui/widget/spinwidget", {
+        value = 30, value_min = 0, value_max = 100, default_value = 100, unit = "%", value_hold_step = 10,
+        title_text = "Minimum threshold to hide battery item", callback = noop,
+        extra_text = "Disable", extra_callback = noop, ok_always_enabled = true }) end, book = "epub" },
+    { "gw-spin-cpp", function() show("ui/widget/spinwidget", {
+        title_text = "Characters per page", value = 1818, value_min = 500, value_max = 3000, value_hold_step = 20,
+        default_value = 1818, ok_always_enabled = true, keep_shown_on_apply = true, callback = noop,
+        extra_text = "Use publisher page numbers", extra_callback = noop }) end, book = "epub" },
+    { "gw-spin2-battery", function() show("ui/widget/doublespinwidget", {
+        title_text = "Battery level alert thresholds",
+        info_text = "Low level threshold is checked when the device is not charging.\nHigh level threshold is checked when the device is charging.",
+        left_text = "Low", left_value = 20, left_min = 1, left_max = 90, left_default = 20, left_hold_step = 5,
+        right_text = "High", right_value = 90, right_min = 20, right_max = 100, right_default = 100, right_hold_step = 5,
+        unit = "%", callback = noop }) end, book = "epub" },
+    { "gw-spin2-hyph", function() show("ui/widget/doublespinwidget", {
+        left_value = 2, left_min = 1, left_max = 10, right_value = 3, right_min = 1, right_max = 10,
+        left_default = 2, right_default = 2, width_factor = 0.6, default_text = "Language defaults: 2 / 2",
+        title_text = "Hyphenation limits", info_text = "Set minimum length before hyphenation occurs.",
+        keep_shown_on_apply = true, callback = noop }) end, book = "epub" },
+    { "gw-dt-alarm", function() GW.timer("alarm") end, book = "epub" },
+    { "gw-dt-interval", function() GW.timer("interval") end, book = "epub" },
+    { "gw-arrange-footer", function()
+        local footer = RUI().view.footer
+        local items = {}
+        for i, m in ipairs(footer.mode_index) do
+            items[i] = { text = footer:textOptionTitles(m), label = m, dim = not footer.settings[m] }
+        end
+        show("ui/widget/sortwidget", { title = "Arrange items", item_table = items, callback = noop })
+    end, book = "epub" },
+    -- end gaps-widgets reader scenes
+    -- gaps-lists scenes (leaf/readerlists.lua: bookmark actions / details / select, search bar, pinned page,
+    -- book map and page browser options, page actions, dictionary menus)
+    { "gp-bm-actions", function() GL.marks() require("leaf/readerlists").show_actions(RUI(), GL.item(false)) end, book = "epub" },
+    { "gp-bm-hl-actions", function() GL.marks() require("leaf/readerlists").show_actions(RUI(), GL.item(true)) end, book = "epub" },
+    { "gp-bm-view", function() GL.marks() RUI().bookmark:showBookmarkDetails(2) end, book = "epub" },
+    { "gp-bm-select", function() GL.marks() require("leaf/readerlists").show_select(RUI(), { [1] = true, [3] = true, [4] = true }) end, book = "epub" },
+    { "gp-search-result", function()
+        local s = RUI().search
+        s.last_search_text = "windmill"
+        s.case_insensitive = true
+        require("ui/trapper"):wrap(function() s:findAllText("windmill") end)
+        UIManager:scheduleIn(2, function()
+            GL.close_to_reader()
+            s:gotoResultsItem(3)
+        end)
+    end, wait = 4, book = "epub" },
+    { "gp-search-bar", function()
+        chapter_one(3)
+        local s = RUI().search
+        s.last_search_text = "windmill"
+        s:onShowSearchDialog("windmill", 0, s.current_search_type, true)
+    end, wait = 2, book = "epub" },
+    { "gp-search-wait", function() chapter_one(3) UIManager:show(require("leaf/readerlists").wait_pill("windmill")) end, book = "epub" },
+    { "gp-goto-pin", function()
+        local ui = RUI()
+        ui.doc_settings:saveSetting("pinned_page", ui.document:getPageXPointer(42))
+        ui.gotopage:onShowGotoDialog()
+    end, book = "epub" },
+    { "gp-goto-unpin", function()
+        -- the pin-off button's confirm, over the Go to sheet
+        RUI().gotopage:onShowGotoDialog()
+        UIManager:show(require("ui/widget/confirmbox"):new{
+            text = "Remove the pinned page?\nPage 42 stays as it is; only the pin is removed.", ok_text = "Remove", ok_callback = noop })
+    end, book = "epub" },
+    { "gp-bookmap-menu", function()
+        RUI().thumbnail:onShowBookMap()
+        UIManager:scheduleIn(1.5, function() require("leaf/readerlists").show_map_options(RUI()) end)
+    end, wait = 4, book = "epub" },
+    { "gp-pb-menu", function()
+        RUI().thumbnail:onShowPageBrowser()
+        UIManager:scheduleIn(2, function() require("leaf/readerlists").show_pages_options(RUI()) end)
+    end, wait = 5, book = "epub" },
+    { "gp-pb-hold", function()
+        local ui = RUI()
+        ui.thumbnail:onShowPageBrowser()
+        UIManager:scheduleIn(2, function() require("leaf/readerlists").show_page_hold(ui, ui:getCurrentPage() + 1) end)
+    end, wait = 5, book = "epub" },
+    { "gp-dict-results", function()
+        GL.dict()
+        UIManager:scheduleIn(0.6, function() GL.top():onShowResultsMenu() end)
+    end, wait = 2, book = "epub" },
+    { "gp-dict-lookup", function()
+        GL.dict()
+        UIManager:scheduleIn(0.6, function() GL.top():onLookupInputWord("silence") end)
+    end, wait = 2, book = "epub" },
+    { "gp-dict-wikilang", function()
+        local ui = RUI()
+        ui.wikipedia:initLanguages("Animal Farm")
+        ui.wikipedia.wiki_languages = { "en", "ar", "fr", "de" }
+        ui.wikipedia:showDict("Animal Farm", {
+            { dict = "Wikipedia EN", word = "Animal Farm", lang = "en", definition =
+                "Animal Farm (originally Animal Farm: A Fairy Story) is a satirical allegorical novella, in the form of a beast fable, by George Orwell, first published in England on 17 August 1945. It tells the story of a group of anthropomorphic farm animals who rebel against their human farmer, hoping to create a society where the animals can be equal, free, and happy." },
+        })
+        UIManager:scheduleIn(0.6, function() require("leaf/readerlists").wiki_lang_menu(GL.top()) end)
+    end, wait = 2, book = "epub" },
+    -- end gaps-lists scenes
+    -- gaps-lists stats scenes (leaf/statpages.lua: the statistics plugin's pages, seeded database)
+    { "gp-stats-book", function() STATS.seed():onShowBookStats() end, wait = 2, book = "epub" },
+    { "gp-stats-cal", function() STATS.seed():onShowCalendarView() end, wait = 2, book = "epub" },
+    { "gp-stats-cal-set", function()
+        STATS.seed():onShowCalendarView()
+        require("leaf/statpages").calendar_settings(UIManager._window_stack[#UIManager._window_stack].widget)
+    end, wait = 2, book = "epub" },
+    { "gp-stats-day", function() STATS.seed():onShowCalendarDayView() end, wait = 2, book = "epub" },
+    { "gp-stats-range", function() STATS.seed():onShowTimeRange() end, wait = 2, book = "epub" },
+    { "gp-stats-week", function() STATS.seed():onShowTimeRange() STATS.tap("Last week") end, wait = 2, book = "epub" },
+    { "gp-stats-months", function() STATS.seed():onShowTimeRange() STATS.tap("Books by month") end, wait = 2, book = "epub" },
+    { "gp-stats-in", function()
+        STATS.seed():onShowTimeRange()
+        STATS.tap("Books by month")
+        STATS.tap(nil, 1)
+    end, wait = 2, book = "epub" },
+    { "gp-stats-days", function() STATS.seed():onShowBookStats() STATS.tap("Days reading this book") end, wait = 2, book = "epub" },
+    { "gp-stats-books", function() STATS.seed():onShowTimeRange() STATS.tap("All books") end, wait = 2, book = "epub" },
+    { "gp-stats-reset", function() STATS.seed():resetPerBook() end, wait = 2, book = "epub" },
+    -- end gaps-lists stats scenes
     -- gaps reader scenes (status bar modes, flipping, links, image viewer, quick menu, timer, screenshot,
     -- perception expander, overlapping highlights, stable page numbers, style tweaks, scroll mode)
     { "gr-footer-page", function() GR.footer("page_progress") end, book = "epub" },
@@ -955,6 +1367,233 @@ function LIB.seed()
             local fm = FM()
             if fm then fm:onRefresh() end
         end)
+    end
+end
+
+-- gaps library scenes: helpers
+GL.COLL = "To read this winter"
+-- connected folders + "only add" filters on a collection, in memory only (undone after the shot)
+function GL.coll(on)
+    local RC = require("readcollection")
+    local cs = RC.coll_settings[GL.COLL]
+    if not cs then return end
+    local root = G_reader_settings:readSetting("home_dir"):gsub("/[^/]+$", "")
+    GL.folders = { root .. "/Books/Classics", root .. "/Downloads", root .. "/Books/Philosophy" }
+    cs.folders = { [GL.folders[1]] = { subfolders = true }, [GL.folders[2]] = { scan_on_show = true },
+        [GL.folders[3]] = { subfolders = true, scan_on_show = true } }
+    cs.filter = cs.filter or {}
+    cs.filter.add = { filetype = "epub, pdf", status = { new = true, reading = true } }
+    LK.cleanup = function()
+        cs.folders = nil
+        cs.filter.add = nil
+    end
+end
+-- a comic-like page (panels) as JPEG bytes
+function GL.page_jpeg(seed)
+    local Blitbuffer = require("ffi/blitbuffer")
+    local w, h = 600, 850
+    local bb = Blitbuffer.new(w, h, Blitbuffer.TYPE_BB8)
+    bb:fill(Blitbuffer.COLOR_WHITE)
+    local ink = Blitbuffer.COLOR_BLACK
+    local panels = { { 30, 30, 540, 250 }, { 30, 300, 260, 250 }, { 310, 300, 260, 250 }, { 30, 570, 540, 250 } }
+    for i, p in ipairs(panels) do
+        bb:paintBorder(p[1], p[2], p[3], p[4], 4, ink)
+        local k = (i + (seed or 0)) % 3
+        bb:paintRect(p[1] + 40, p[2] + 60 + k * 30, p[3] - 80, 6, Blitbuffer.COLOR_GRAY_9)
+        bb:paintRect(p[1] + 40, p[2] + 110 + k * 20, math.floor((p[3] - 80) * 0.6), 6, Blitbuffer.COLOR_GRAY_9)
+    end
+    local tmp = os.tmpname()
+    bb:writeJPG(tmp, 80)
+    bb:free()
+    local f = io.open(tmp, "rb")
+    local data = f and f:read("*a")
+    if f then f:close() end
+    os.remove(tmp)
+    return data
+end
+-- the archive: <sandbox>/Downloads/comics-pack.zip (two issues, a cover, a readme), opened in the viewer
+function GL.archive(sub)
+    local root = G_reader_settings:readSetting("home_dir"):gsub("/[^/]+$", "")
+    local dir = root .. "/Downloads"
+    local zip = dir .. "/comics-pack.zip"
+    local lfs = require("libs/libkoreader-lfs")
+    if not lfs.attributes(zip, "mode") then
+        lfs.mkdir(dir)
+        local W = require("ffi/archiver").Writer:new()
+        if W:open(zip, "zip") then
+            W:setZipCompression("store")
+            for i = 1, 9 do W:addFileFromMemory(string.format("Issue 1/page-%02d.jpg", i), GL.page_jpeg(i)) end
+            for i = 1, 8 do W:addFileFromMemory(string.format("Issue 2/page-%02d.jpg", i), GL.page_jpeg(i + 1)) end
+            W:addFileFromMemory("cover.jpg", GL.page_jpeg(0))
+            W:addFileFromMemory("readme.txt", "Comics pack: two issues of The Long Field.\n")
+            W:close()
+        end
+    end
+    local av = FM().archiveviewer
+    av:openFile(zip)
+    if sub and av.booklist then
+        av.booklist.path = sub
+        av.booklist:rebuild()
+    end
+    return av
+end
+-- a custom cover image (the book's own cover, saved as a JPEG next to the sandbox)
+function GL.cover_image()
+    local path = require("datastorage"):getDataDir() .. "/animal-farm-1945.jpg"
+    if not require("libs/libkoreader-lfs").attributes(path, "mode") then
+        local bb = FM().bookinfo:getCoverImage(nil, home("Animal Farm.epub"), true)
+        if bb then
+            bb:writeJPG(path, 85)
+            bb:free()
+        end
+    end
+    return path
+end
+-- OPDS page stream: Kavita-like publication, HTTP stubbed with a local page image
+function GL.pse()
+    local http = require("socket.http")
+    local real = http.request
+    local data = GL.page_jpeg(2)
+    http.request = function(req)
+        if type(req) == "table" and req.sink then req.sink(data) end
+        return 1, 200, {}, "HTTP/1.1 200 OK"
+    end
+    LK.cleanup = function() http.request = real end
+    require("leaf/gapslib").pse_context("The Long Field · Issue 3", "Kavita")
+    require("opdspse"):streamPages("http://leaf.invalid/opds/key/image?page={pageNumber}", 48, false, nil, nil, 12)
+end
+
+-- gaps-lists scenes: helpers
+-- bookmarks (seed_bookmarks) + three highlights, one with a note (once)
+function GL.marks()
+    seed_bookmarks()
+    local ui = RUI()
+    if ui._leaf_gl_marks then return end
+    ui._leaf_gl_marks = true
+    chapter_one(1)
+    local hl = ui.highlight
+    for i, y in ipairs({ 0.30, 0.52, 0.70 }) do
+        LK.select(y, y + 0.02)
+        local index = hl:saveHighlight()
+        hl:clear()
+        local item = index and ui.annotation.annotations[index]
+        if item and i == 2 then item.note = "Old Major's dream" end
+    end
+    chapter_one(3)
+end
+-- the first bookmark (false) or highlight (true)
+function GL.item(highlight)
+    for _i, a in ipairs(RUI().annotation.annotations) do
+        if (a.drawer ~= nil) == highlight then return a end
+    end
+end
+function GL.top() return UIManager._window_stack[#UIManager._window_stack].widget end
+-- close everything above the reader
+function GL.close_to_reader()
+    local stack = UIManager._window_stack
+    while #stack > 0 and stack[#stack].widget ~= RUI() do UIManager:close(stack[#stack].widget) end
+end
+-- the dictionary popup on "silence"
+function GL.dict()
+    local ui = RUI()
+    LK.select(0.30, 0.30, true)
+    ui.dictionary.highlight = ui.highlight
+    ui.dictionary:showDict("silence", {
+        { dict = "Oxford Dictionary of English", word = "silence", definition = "silence (noun)\n1. Complete absence of sound.\n   “the silence of the night”\n2. The fact of abstaining from speech.\n   “she lapsed into silence”" },
+        { dict = "Wiktionary EN→AR (offline)", word = "سكوت", definition = "سكوت، صمت" },
+        { dict = "WordNet 3.1", word = "silences", definition = "(n) silence: the absence of sound" },
+        { dict = "Al-Mawrid Mini", word = "سكوت", definition = "سكوت؛ صمت" },
+    }, LK.word_boxes())
+end
+
+-- gaps-lists stats scenes: helpers
+-- the reader's statistics with a realistic database (idempotent): the open book for the last week
+-- (one day without any reading), several other books this month, earlier books in past months
+function STATS.seed()
+    local ui = RUI()
+    local st = ui and ui.statistics
+    if not st then error("no statistics plugin") end
+    if STATS.seeded then return st end
+    STATS.seeded = true
+    -- calendar settings as the prototype shows them
+    st.settings.calendar_nb_book_spans = 2
+    st.settings.calendar_show_histogram = true
+    st.settings.calendar_browse_future_months = false
+    st.settings.calendar_start_day_of_week = 2
+    st.settings.calendar_day_start_hour = 4
+    st.settings.calendar_day_start_minute = 0
+    st.settings.calendar_use_day_time_shift = true
+    pcall(function() st:insertDB() end)
+    local SQ3 = require("lua-ljsqlite3/init")
+    local conn = SQ3.open(require("datastorage"):getSettingsDir() .. "/statistics.sqlite3")
+    local have = tonumber(conn:rowexec("SELECT count(*) FROM book WHERE md5 LIKE 'leaf-seed-%';")) or 0
+    if have == 0 then
+        local now = os.time()
+        local function q(v) return "'" .. tostring(v):gsub("'", "''") .. "'" end
+        local function at(days_ago, h, m)
+            local d = os.date("*t", now - days_ago * 86400)
+            d.hour, d.min, d.sec = h, m, 0
+            return os.time(d)
+        end
+        local function read(id, total, days_ago, h, m, minutes, page0)
+            local t0 = at(days_ago, h, m)
+            if t0 + minutes * 60 > now - 60 then t0 = now - minutes * 60 - 120 end
+            local n = math.max(1, math.floor(minutes * 60 / 75))
+            for k = 0, n - 1 do
+                conn:exec(string.format("INSERT OR IGNORE INTO page_stat_data VALUES (%d, %d, %d, 75, %d);",
+                    id, (page0 + k) % total + 1, t0 + k * 75, total))
+            end
+            return page0 + n
+        end
+        local function book(title, authors, pages)
+            conn:exec(string.format([[INSERT INTO book (title, authors, notes, last_open, highlights, pages, series, language, md5,
+                total_read_time, total_read_pages) VALUES (%s, %s, 0, %d, 0, %d, '', 'en', %s, 0, 0);]],
+                q(title), q(authors), now - 200 * 86400, pages, q("leaf-seed-" .. title)))
+            return tonumber(conn:rowexec("SELECT max(id) FROM book;")), pages
+        end
+        -- the open book: today (three sessions) and five more days; three days ago nobody read
+        local cur = st.id_curr_book
+        if cur then
+            local total = tonumber(conn:rowexec("SELECT pages FROM book WHERE id = " .. cur .. ";")) or 386
+            local pg = 60
+            pg = read(cur, total, 0, 6, 40, 13, pg)
+            pg = read(cur, total, 0, 7, 5, 9, pg)
+            pg = read(cur, total, 0, 21, 2, 13, pg)
+            for _i, d in ipairs({ { 1, 28 }, { 2, 20 }, { 4, 26 }, { 5, 11 }, { 6, 14 } }) do
+                pg = read(cur, total, d[1], 20, 30, d[2], pg)
+            end
+        end
+        local BOOKS = {
+            { "Siddhartha", "Hermann Hesse", 152, { { 0, 12, 30, 14 }, { 0, 21, 30, 8 }, { 1, 21, 10, 22 } } },
+            { "The Odyssey", "Homer", 541, { { 4, 22, 0, 30 }, { 5, 22, 0, 18 }, { 6, 22, 0, 25 } } },
+            { "Walden", "Henry David Thoreau", 352, { { 9, 21, 0, 35 }, { 10, 21, 0, 28 } } },
+            { "Meditations", "Marcus Aurelius", 254, { { 7, 7, 0, 25 }, { 8, 7, 0, 20 }, { 10, 7, 0, 22 }, { 12, 7, 0, 30 }, { 14, 7, 0, 18 }, { 16, 7, 0, 26 } } },
+            { "Frankenstein", "Mary Shelley", 280, { { 12, 20, 0, 40 }, { 13, 20, 0, 45 }, { 14, 20, 0, 38 }, { 15, 20, 0, 50 }, { 16, 20, 0, 42 }, { 17, 20, 0, 36 }, { 18, 20, 0, 44 } } },
+            { "Dracula", "Bram Stoker", 418, { { 34, 21, 0, 50 }, { 36, 21, 0, 55 }, { 38, 21, 0, 48 }, { 40, 21, 0, 60 } } },
+            { "A Study in Scarlet", "Arthur Conan Doyle", 188, { { 50, 20, 0, 60 }, { 52, 20, 0, 70 }, { 55, 20, 0, 65 } } },
+            { "Pride and Prejudice", "Jane Austen", 432, { { 60, 21, 0, 45 }, { 63, 21, 0, 50 }, { 66, 21, 0, 40 }, { 70, 21, 0, 55 } } },
+            { "Moby-Dick", "Herman Melville", 635, { { 90, 22, 0, 30 }, { 95, 22, 0, 40 }, { 100, 22, 0, 35 } } },
+        }
+        for _i, b in ipairs(BOOKS) do
+            local id, total = book(b[1], b[2], b[3])
+            local pg = 0
+            for _j, s in ipairs(b[4]) do pg = read(id, total, s[1], s[2], s[3], s[4], pg) end
+        end
+        conn:exec([[UPDATE book SET last_open = (SELECT max(start_time) FROM page_stat_data WHERE id_book = book.id)
+            WHERE md5 LIKE 'leaf-seed-%';]])
+    end
+    conn:close()
+    return st
+end
+-- tap a row of the statistics page on top (by the start of its key, or its index)
+function STATS.tap(prefix, index)
+    local kv = RUI().statistics.kv
+    if not (kv and kv.kv_pairs) then return end
+    for i, pr in ipairs(kv.kv_pairs) do
+        if type(pr) == "table" and ((index and i == index) or (prefix and tostring(pr[1]):sub(1, #prefix) == prefix)) then
+            if kv.call then kv:call(i) elseif pr.callback then pr.callback(kv, { kv_pairs_idx = i }) end
+            return
+        end
     end
 end
 

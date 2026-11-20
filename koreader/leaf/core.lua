@@ -60,8 +60,19 @@ L.MODULES = {
     "pageheader",
     -- library polish
     "bookactions",
-    -- gaps: reader
+    -- gaps: library (select mode list, connected folders, metadata fields, archive viewer)
+    "gapslib",
+    -- gaps: generic widgets
+    "arrange",
     "imageviewer",
+    "pathchooser",
+    "openwith",
+    "unlock",
+    -- gaps-lists: statistics pages
+    "statpages",
+    -- gaps-lists: bookmark actions / details / select, search bar, map options, dictionary menus
+    "readerlists",
+    -- gaps: reader (imageviewer is listed above)
     "reader_gaps",
 }
 

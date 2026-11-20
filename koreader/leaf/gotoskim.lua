@@ -223,6 +223,12 @@ function M.apply(L)
                 VerticalSpan:new{ width = T.px("sp-2") }, field, hint, pad_g, VerticalSpan:new{ width = T.px("sp-3") } } },
             Kit.line(inner),
             foot }
+        -- the pinned page (KOReader's Pin current page / Go to pinned page; prototype "goto-pin")
+        local rl = package.loaded["leaf/readerlists"]
+        if rl and rl.pin_row then
+            table.insert(body, 3, rl.pin_row(ui, inner, function() UIManager:close(self) end))
+            body:resetLayout()
+        end
         local frame, container = Kit.sheet{ width = sheet_w, content = body }
         self._frame = frame
         self[1] = container
