@@ -103,6 +103,107 @@ local function ts_open(key, after)
 end
 local noop = function() end
 
+-- gaps-widgets helpers
+local GW = {} -- gaps-widgets scenes: helpers
+function GW.arrange(sel)
+    local items = {}
+    for _i, t in ipairs({ "Favorites", "To read this winter", "Sherlock Holmes", "Arabic", "Poetry", "Book club", "Philosophy", "Comics" }) do
+        table.insert(items, { text = t })
+    end
+    local w = require("ui/widget/sortwidget"):new{ title = "Arrange collections", item_table = items, callback = noop }
+    UIManager:show(w)
+    if sel then
+        w.marked = sel
+        w:_populateItems()
+    end
+    return w
+end
+
+-- the read timer's DateTimeWidget, with its check boxes (readtimer.koplugin addCheckboxes)
+function GW.timer(kind)
+    local CheckButton = require("ui/widget/checkbutton")
+    local w = require("ui/widget/datetimewidget"):new(kind == "alarm"
+        and { hour = 22, min = 30, ok_text = "Set alarm", title_text = "Alarm", info_text = "Enter a time in hours and minutes.", callback = noop }
+        or { hour = 0, min = 20, hour_max = 17, ok_text = "Start timer", title_text = "Interval", info_text = "Enter a time in hours and minutes.", callback = noop })
+    if kind ~= "alarm" then w:addWidget(CheckButton:new{ text = "Auto-reschedule", checked = false, parent = w, callback = noop }) end
+    w:addWidget(CheckButton:new{ text = "Show timer in alt status bar", checked = false, parent = w, callback = noop })
+    w:addWidget(CheckButton:new{ text = "Show timer in status bar", checked = true, parent = w, callback = noop })
+    UIManager:show(w)
+end
+
+-- a small fake device tree for the path chooser: <data dir>/onboard/{Downloads, Pictures/Covers, …}
+function GW.onboard()
+    local lfs = require("libs/libkoreader-lfs")
+    local root = require("datastorage"):getDataDir() .. "/onboard"
+    local function dir(p) lfs.mkdir(root .. (p ~= "" and ("/" .. p) or "")) end
+    local function file(p, kb)
+        local f = io.open(root .. "/" .. p, "rb")
+        if f then f:close() return end
+        f = io.open(root .. "/" .. p, "wb")
+        if f then f:write(string.rep("x", math.floor(kb * 1024))) f:close() end
+    end
+    for _i, d in ipairs({ "", "Books", "Downloads", "Downloads/Comics", "Downloads/Articles", "Pictures", "Pictures/Covers",
+        "Screenshots", "Documents" }) do dir(d) end
+    for i = 1, 10 do file("Downloads/Comics/issue-" .. i .. ".cbz", 1) end
+    for i = 1, 12 do file("Downloads/Articles/article-" .. i .. ".html", 1) end
+    file("Downloads/comics-pack.zip", 480) file("Downloads/The Odyssey.epub", 120) file("Downloads/receipt.pdf", 88)
+    file("Pictures/Covers/animal-farm-1945.jpg", 286) file("Pictures/Covers/animal-farm-penguin.jpg", 302)
+    file("Pictures/Covers/moby-dick.png", 540)
+    return root
+end
+
+-- an input dialog with its keyboard, then a long-press on one of its keys (by key or label)
+function GW.hold_key(title, input, which)
+    local d
+    d = require("ui/widget/inputdialog"):new{ title = title, input = input, input_hint = title == "Search" and "Title, author, text…" or nil,
+        buttons = {{ { text = "Cancel", id = "close", callback = function() UIManager:close(d) end },
+            { text = "Save", is_enter_default = true, callback = noop } }} }
+    UIManager:show(d)
+    d:onShowKeyboard()
+    UIManager:scheduleIn(0.4, function()
+        local kb = d._input_widget and d._input_widget.keyboard
+        for _i, row in ipairs(kb and kb.layout or {}) do
+            for _j, key in ipairs(row) do
+                if (key.key == which or key.label == which) and key.hold_callback then key.hold_callback() return end
+            end
+        end
+    end)
+end
+
+-- a note field with a few clipboard snippets (InputText's clipboard settings, as KOReader saves them)
+function GW.note_field()
+    local IT = require("ui/widget/inputtext")
+    if IT.clipboard_settings then
+        IT.clipboard_settings.snippets = {
+            { name = "Signature", text = "— sent from my e-reader" },
+            { text = "Remember to return this book to the library." },
+            { name = "Book club", text = "Book club · Thursday 19:00 · chapters 4–6" },
+            { name = "Address", text = "12 Rue des Lilas, Lyon" },
+        }
+    end
+    pcall(function() require("device").input.setClipboardText("the creatures outside looked from pig to man") end)
+    local d
+    d = require("ui/widget/inputdialog"):new{ title = "Add a note", input = "The windmill was finished at last, and the animals",
+        buttons = {{ { text = "Cancel", id = "close", callback = function() UIManager:close(d) end },
+            { text = "Save", is_enter_default = true, callback = noop } }} }
+    UIManager:show(d)
+    d:onShowKeyboard()
+    return d._input_widget
+end
+
+-- the sleep screen, then its lock prompt (ScreenSaverLockWidget), with or without an exit gesture
+function GW.unlock(gesture)
+    local ss = require("ui/screensaver")
+    pcall(function() ss:setup() ss:show() end)
+    UIManager:scheduleIn(0.6, function()
+        local w = require("ui/widget/screensaverlockwidget"):new{ ui = FM() }
+        w.has_exit_screensaver_gesture = gesture
+        if gesture then w.ui = { gestures = { gestures = { swipe_north = { exit_screensaver = true } } } } end
+        w:showWaitForGestureMessage()
+    end)
+    UIManager:scheduleIn(2.2, function() pcall(function() ss:close_widget() ss:cleanup() end) end)
+end
+
 local LK = {} -- lookup scenes: helpers, defined below the list
 local LIB = {} -- library scenes: helpers, defined below the list
 -- desktop has no Wi-Fi hardware: a fake scan result (system and tools scenes)
@@ -400,6 +501,128 @@ local SCENES = {
     end },
     -- end polish-ui scenes
     -- end system and tools scenes
+    -- gaps-widgets scenes (library side: spinners, date/time, arrange, path chooser, image viewer,
+    -- keyboard popups, clipboard, open with, unlock)
+    { "gw-spin-items", function()
+        local w = require("ui/widget/spinwidget"):new{ title_text = "Items per page", value = 14, value_min = 6,
+            value_max = 30, default_value = 14, keep_shown_on_apply = true, callback = noop }
+        UIManager:show(w)
+        -- the prototype state: moved to 16 (Apply enabled)
+        w.value_widget.value = 16
+        w.value_widget:update()
+    end },
+    { "gw-number-err", function()
+        local w = require("ui/widget/spinwidget"):new{ title_text = "Items per page", value = 14, value_min = 6,
+            value_max = 30, default_value = 14, keep_shown_on_apply = true, callback = noop }
+        UIManager:show(w)
+        local d = require("leaf/picker").enter_number(w.value_widget)
+        d._input_widget:setText("42")
+        local row = d.button_table.buttons_layout[#d.button_table.buttons_layout]
+        row[#row].callback()
+    end, wait = 2 },
+    { "gw-spin2-grid", function() show("ui/widget/doublespinwidget", {
+        title_text = "Portrait cover grid mode", width_factor = 0.6,
+        left_text = "Columns", left_value = 3, left_min = 2, left_max = 4, left_default = 3, left_precision = "%01d",
+        right_text = "Rows", right_value = 3, right_min = 2, right_max = 4, right_default = 3, right_precision = "%01d",
+        keep_shown_on_apply = true, callback = noop }) end },
+    { "gw-spin-listmodes", function() show("ui/widget/spinwidget", {
+        title_text = "List modes", value = 7, value_min = 3, value_max = 10, default_value = 7,
+        keep_shown_on_apply = true, callback = noop }) end },
+    { "gw-dt-daystart", function() show("ui/widget/datetimewidget", {
+        hour = 4, min = 0, min_max = 50, min_step = 10, min_hold_step = 30, ok_text = "Set time",
+        title_text = "Daily timeline starts at", info_text = "Set the time when the daily timeline should start.",
+        callback = noop }) end },
+    { "gw-dt-suspend", function() show("ui/widget/datetimewidget", {
+        hour = 1, min = 0, hour_max = 23, min_max = 59, hour_hold_step = 5, min_hold_step = 10,
+        ok_text = "Set timeout", title_text = "Timeout for autosuspend", info_text = "Enter time in hours and minutes.",
+        default_value = "1h 0m", default_callback = noop, extra_text = "Disable", extra_callback = noop,
+        callback = noop }) end },
+    { "gw-arrange-coll", function() GW.arrange() end },
+    { "gw-arrange-sel", function() GW.arrange(3) end },
+    { "gw-arrange-menu", function()
+        local w = GW.arrange()
+        UIManager:scheduleIn(0.3, function() w:onShowWidgetMenu() end)
+    end },
+    { "gw-arrange-books", function()
+        local items = {}
+        for _i, t in ipairs({ "Walden", "Crime and Punishment", "Jane Eyre", "Middlemarch", "Little Women", "Siddhartha", "The Odyssey" }) do
+            table.insert(items, { text = t })
+        end
+        -- inside the collection, so the page names it
+        local RC = require("readcollection")
+        if not RC.coll["To read this winter"] then RC:addCollection("To read this winter") end
+        pcall(function() FM().collections:onShowColl("To read this winter") end)
+        UIManager:scheduleIn(0.5, function()
+            show("ui/widget/sortwidget", { title = "Arrange books in collection", item_table = items, callback = noop })
+        end)
+    end, wait = 2 },
+    { "gw-path-folder", function()
+        local root = GW.onboard()
+        require("ui/downloadmgr"):new{ onConfirm = noop }:chooseDir(root .. "/Downloads")
+    end },
+    { "gw-path-file", function()
+        local root = GW.onboard()
+        LIB.seed()
+        FM().bookinfo:setCustomCover(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+        local top = UIManager._window_stack[#UIManager._window_stack].widget
+        if top.changeToPath then top:changeToPath(root .. "/Pictures/Covers") end
+    end },
+    { "gw-path-confirm", function()
+        local root = GW.onboard()
+        local pc = require("ui/widget/pathchooser"):new{ select_directory = false, path = root .. "/Pictures/Covers",
+            file_filter = function(f) return require("document/documentregistry"):isImageFile(f) end, onConfirm = noop }
+        UIManager:show(pc)
+        pc:onMenuHold({ path = root .. "/Pictures/Covers/animal-farm-1945.jpg" })
+    end },
+    { "gw-iv-cover", function()
+        LIB.seed()
+        FM().bookinfo:onShowBookCover(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+    end, wait = 2 },
+    { "gw-iv-rot", function()
+        LIB.seed()
+        FM().bookinfo:onShowBookCover(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+        local top = UIManager._window_stack[#UIManager._window_stack].widget
+        top.rotated = true
+        top.scale_factor, top._scale_to_fit = 1, false
+        top:update()
+    end, wait = 2 },
+    { "gw-keypopup", function() GW.hold_key("Rename collection", "Café readi", "e") end, wait = 2 },
+    { "gw-kblayouts", function()
+        G_reader_settings:saveSetting("keyboard_layouts", { "en", "ar", "fr" })
+        G_reader_settings:saveSetting("keyboard_layout_default", "en")
+        GW.hold_key("Search", "", "🌐")
+    end, wait = 2 },
+    { "gw-clipboard", function()
+        local it = GW.note_field()
+        UIManager:scheduleIn(0.4, function() it:holdTextBox() end)
+    end, wait = 2 },
+    { "gw-snippets", function()
+        local it = GW.note_field()
+        UIManager:scheduleIn(0.4, function() it:showClipboardSnippets() end)
+    end, wait = 2 },
+    { "gw-snippet-edit", function()
+        local it = GW.note_field()
+        UIManager:scheduleIn(0.4, function() it:editClipboardSnippet(3) end)
+    end, wait = 2 },
+    { "gw-openwith", function()
+        LIB.seed()
+        FM():showOpenWithDialog(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+    end },
+    { "gw-openwith-confirm", function()
+        LIB.seed()
+        FM():showOpenWithDialog(G_reader_settings:readSetting("home_dir") .. "/Animal Farm.epub")
+        local d = UIManager._window_stack[#UIManager._window_stack].widget
+        for _i, row in ipairs(d.radio_button_table.radio_buttons_layout) do
+            for _j, b in ipairs(row) do
+                if b.provider and b.provider.provider == "mupdf" then d.radio_button_table:checkButton(b) end
+            end
+        end
+        d._check_global_button:toggleCheck()
+        if d._leaf_open then d._leaf_open() end
+    end },
+    { "gw-unlock", function() LIB.seed() GW.unlock(true) end, wait = 2 },
+    { "gw-unlock-tap", function() LIB.seed() GW.unlock(false) end, wait = 2 },
+    -- end gaps-widgets scenes
     -- reader scenes replace the file manager: keep them last
     -- every EPUB reader scene runs on the bilingual Animal Farm (book = "epub": opened first if needed)
     { "reader", function()
@@ -615,6 +838,37 @@ local SCENES = {
             ui:handleEvent(require("ui/event"):new("SetLineSpace", before))
         end)
     end) end },
+    -- gaps-widgets reader scenes (spinners, timers and status bar items opened from the reader)
+    { "gw-spin-battery", function() show("ui/widget/spinwidget", {
+        value = 30, value_min = 0, value_max = 100, default_value = 100, unit = "%", value_hold_step = 10,
+        title_text = "Minimum threshold to hide battery item", callback = noop,
+        extra_text = "Disable", extra_callback = noop, ok_always_enabled = true }) end, book = "epub" },
+    { "gw-spin-cpp", function() show("ui/widget/spinwidget", {
+        title_text = "Characters per page", value = 1818, value_min = 500, value_max = 3000, value_hold_step = 20,
+        default_value = 1818, ok_always_enabled = true, keep_shown_on_apply = true, callback = noop,
+        extra_text = "Use publisher page numbers", extra_callback = noop }) end, book = "epub" },
+    { "gw-spin2-battery", function() show("ui/widget/doublespinwidget", {
+        title_text = "Battery level alert thresholds",
+        info_text = "Low level threshold is checked when the device is not charging.\nHigh level threshold is checked when the device is charging.",
+        left_text = "Low", left_value = 20, left_min = 1, left_max = 90, left_default = 20, left_hold_step = 5,
+        right_text = "High", right_value = 90, right_min = 20, right_max = 100, right_default = 100, right_hold_step = 5,
+        unit = "%", callback = noop }) end, book = "epub" },
+    { "gw-spin2-hyph", function() show("ui/widget/doublespinwidget", {
+        left_value = 2, left_min = 1, left_max = 10, right_value = 3, right_min = 1, right_max = 10,
+        left_default = 2, right_default = 2, width_factor = 0.6, default_text = "Language defaults: 2 / 2",
+        title_text = "Hyphenation limits", info_text = "Set minimum length before hyphenation occurs.",
+        keep_shown_on_apply = true, callback = noop }) end, book = "epub" },
+    { "gw-dt-alarm", function() GW.timer("alarm") end, book = "epub" },
+    { "gw-dt-interval", function() GW.timer("interval") end, book = "epub" },
+    { "gw-arrange-footer", function()
+        local footer = RUI().view.footer
+        local items = {}
+        for i, m in ipairs(footer.mode_index) do
+            items[i] = { text = footer:textOptionTitles(m), label = m, dim = not footer.settings[m] }
+        end
+        show("ui/widget/sortwidget", { title = "Arrange items", item_table = items, callback = noop })
+    end, book = "epub" },
+    -- end gaps-widgets reader scenes
     -- PDF scenes: replace the EPUB with the PDF, so they run last (reader + typeset tabs)
     { "reader-pdf", function() open_book(PDF_BOOK) end, keep = true, wait = 4, book = "pdf" },
     { "chrome-pdf", function()

@@ -127,7 +127,7 @@ function M.apply(L)
     local function action_row(self)
         local rows = self.buttons
         local last = rows and rows[#rows]
-        if not (last and #last >= 1 and #last <= 3) then return end
+        if not (last and #last >= 1 and #last <= (self.leaf_actions and 5 or 3)) then return end
         if not is_action_parent(self.show_parent) then return end
         for _, e in ipairs(last) do
             if e.icon or e.width or not (e.text or e.text_func) then return end

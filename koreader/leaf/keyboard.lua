@@ -136,6 +136,18 @@ local function leaf_arabic(ar)
     return out
 end
 
+local function HorizontalGroupNew(pad, w)
+    local HorizontalGroup = require("ui/widget/horizontalgroup")
+    local HorizontalSpan = require("ui/widget/horizontalspan")
+    return VerticalGroup:new{ align = "left", VerticalSpan:new{ width = require("leaf/core").T.px("sp-2") },
+        HorizontalGroup:new{ HorizontalSpan:new{ width = pad }, w } }
+end
+local function TextBoxWidgetNew(text, width)
+    local L = require("leaf/core")
+    return require("ui/widget/textboxwidget"):new{ text = text, face = L.face("ui", "fs-xs"), fgcolor = L.T.color("text-3"),
+        width = width, bgcolor = L.T.color("surface") }
+end
+
 function M.apply(L)
     local T = L.T
     do
@@ -165,6 +177,7 @@ function M.apply(L)
         end
     end
     assert(VirtualKey, "VirtualKey not found")
+    local vk_init_orig = VirtualKey.init -- (VirtualKeyPopup is one of its upvalues; read before wrapping)
 
     local function kind(self)
         local kb, label = self.keyboard, self.label
@@ -250,6 +263,26 @@ function M.apply(L)
             content,
         }
         self[1] = frame
+        -- holding the globe key always opens the layout chooser (KOReader shows a popup of the
+        -- layouts when several are enabled; Leaf's chooser lists them with the rotation and default)
+        if self.label == "🌐" and self.hold_callback then
+            local state
+            local i = 1
+            while true do
+                local name, value = debug.getupvalue(self.hold_callback, i)
+                if not name then break end
+                if name == "keyboard_state" then state = value end
+                i = i + 1
+            end
+            if state then
+                local key = self
+                self.hold_callback = function()
+                    key.keyboard:onSwitchingKeyboardLayout()
+                    key.keyboard_layout_dialog = require("ui/widget/keyboardlayoutdialog"):new{ parent = key, keyboard_state = state }
+                    require("ui/uimanager"):show(key.keyboard_layout_dialog)
+                end
+            end
+        end
     end, "VirtualKey:init")
 
     L.wrap(VK, "addKeys", function(orig, self)
@@ -266,6 +299,140 @@ function M.apply(L)
             frame.bordersize = T.px("hairline")
         end
     end, "VirtualKeyboard:addKeys")
+    ---------------------------------------------------------------- key popup (Gaps › key-popup)
+    -- KOReader's VirtualKeyPopup (hold a key: accents and variants) keeps its keys and its place
+    -- under the finger; it gets the popover look (.ko-popover.gp-kp: --surface, --r-lg, hairline
+    -- --border-strong, --sp-2 padding), the held key as a function key (--surface-3) and a hint under
+    -- the keys: "Slide to a letter and lift · or swipe on the key".
+    local GW = require("leaf/widgets/gwkit")(L)
+    local VirtualKeyPopup
+    do
+        local i = 1
+        while true do
+            local name, value = debug.getupvalue(vk_init_orig, i)
+            if not name then break end
+            if name == "VirtualKeyPopup" then VirtualKeyPopup = value end
+            i = i + 1
+        end
+    end
+    if VirtualKeyPopup then
+        L.wrap(VirtualKeyPopup, "init", function(orig, self)
+            orig(self)
+            local pos = self[1]
+            local frame = pos and pos[1]
+            if not (frame and frame[1]) then return end
+            frame.background = T.color("surface")
+            frame.color = T.color("border-strong")
+            frame.bordersize = T.px("hairline")
+            frame.radius = T.px("r-lg")
+            -- the held key: a function key (.kb-fn), not KOReader's light grey
+            for _i, row in ipairs(self.layout or {}) do
+                for _j, key in ipairs(row) do
+                    if key.key == self.parent_key.key_chars[1] and key[1] then key[1].background = T.color("surface-3") end
+                end
+            end
+            local keys = frame[1]
+            local w = keys.dimen.w
+            local hint = require("ui/widget/textboxwidget"):new{ text = require("gettext")("Slide to a letter and lift · or swipe on the key"),
+                face = L.face("ui", "fs-xs"), fgcolor = T.color("text-3"), width = w, bgcolor = T.color("surface") }
+            frame[1] = VerticalGroup:new{ align = "left", keys,
+                VerticalSpan:new{ width = T.px("sp-1") }, CenterContainer:new{ dimen = Geom:new{ w = w, h = hint:getSize().h }, hint } }
+            frame.dimen = frame:getSize()
+            local x, y = pos.dimen.x, pos.dimen.y
+            -- keep the whole popup on screen
+            local H = require("device").screen:getHeight()
+            if y + frame.dimen.h > H then pos.dimen.y = H - frame.dimen.h end
+            self.dimen = Geom:new{ x = x, y = pos.dimen.y, w = frame.dimen.w, h = frame.dimen.h }
+        end, "VirtualKeyPopup:init")
+    end
+
+    ---------------------------------------------------------------- layout chooser (Gaps › kb-layouts)
+    -- KOReader's KeyboardLayoutDialog (hold the globe key) becomes a popover over the globe key:
+    -- KEYBOARD LAYOUT, one radio row per layout (native name · in the rotation · default), tap =
+    -- switch; then "All keyboard layouts…" (KOReader's own list) and a hint.
+    local KeyboardLayoutDialog = require("ui/widget/keyboardlayoutdialog")
+    L.wrap(KeyboardLayoutDialog, "init", function(orig, self)
+        orig(self)
+        if self._leaf_plain then return end
+        local _ = require("gettext")
+        local Language = require("ui/language")
+        local util = require("util")
+        local Screen = require("device").screen
+        local UIManager = require("ui/uimanager")
+        local W = math.floor(Screen:scaleBySize(320 * T.scale))
+        local layouts = G_reader_settings:readSetting("keyboard_layouts", {})
+        local default = G_reader_settings:readSetting("keyboard_layout_default")
+        local kb = self.parent.keyboard
+        local current
+        self.keyboard_state.force_current_layout = true
+        current = kb:getKeyboardLayout()
+        self.keyboard_state.force_current_layout = false
+        -- (KOReader falls back to the UI language, then English, as VirtualKeyboard:init does)
+        if not kb.lang_to_keyboard_layout[current or ""] then
+            current = (current or ""):sub(1, 2)
+            if not kb.lang_to_keyboard_layout[current] then current = "en" end
+        end
+        local function close() UIManager:close(self.parent.keyboard_layout_dialog or self) end
+        -- the layouts in the rotation, the current and the default first, then the others
+        local list, seen = {}, {}
+        local function add(k) if k and kb.lang_to_keyboard_layout[k] and not seen[k] then seen[k] = true table.insert(list, k) end end
+        add(current) add(default)
+        for _i, k in ipairs(layouts) do add(k) end
+        for k in require("ffi/util").orderedPairs(kb.lang_to_keyboard_layout) do add(k) end
+        -- "العربية · Arabic": KOReader's (native) name, then the English one
+        local ENGLISH = { ar = "Arabic", bg = "Bulgarian", bn = "Bengali", ca = "Catalan", cs = "Czech", da = "Danish",
+            de = "German", el = "Greek", eo = "Esperanto", es = "Spanish", fa = "Persian", fr = "French", he = "Hebrew",
+            hr = "Croatian", hu = "Hungarian", it = "Italian", ja = "Japanese", ka = "Georgian", ko_KR = "Korean",
+            lt = "Lithuanian", nb = "Norwegian", nl = "Dutch", pl = "Polish", pt_BR = "Portuguese", ro = "Romanian",
+            ru = "Russian", sk = "Slovak", sv = "Swedish", th = "Thai", tr = "Turkish", uk = "Ukrainian", vi = "Vietnamese",
+            zh = "Chinese", zh_CN = "Chinese" }
+        local rows = VerticalGroup:new{ align = "left", GW.section(_("Keyboard layout"), W) }
+        local max_rows = math.max(3, math.floor((Screen:getHeight() * 0.45) / T.px("h-row")))
+        for i, k in ipairs(list) do
+            if i > max_rows then break end
+            local name = Language:getLanguageName(k) or k
+            local label = (ENGLISH[k] and ENGLISH[k] ~= name) and (name .. " · " .. ENGLISH[k]) or name
+            local sub = {}
+            if util.arrayContains(layouts, k) then table.insert(sub, _("In the globe-key rotation")) end
+            if k == default then table.insert(sub, _("Default")) end
+            table.insert(rows, GW.pop_row{ width = W, label = label, sub = #sub > 0 and table.concat(sub, " · ") or nil,
+                trailing = GW.radio(k == current), callback = function()
+                    close()
+                    kb:setKeyboardLayout(k)
+                end })
+        end
+        table.insert(rows, GW.divider(W))
+        table.insert(rows, GW.pop_row{ width = W, icon = "leaf.gw.settings-2", label = _("All keyboard layouts…"), callback = function()
+            close()
+            local d = KeyboardLayoutDialog:new{ parent = self.parent, keyboard_state = self.keyboard_state, _leaf_plain = true }
+            self.parent.keyboard_layout_dialog = d
+            UIManager:show(d)
+        end })
+        local pad = T.px("sp-4")
+        table.insert(rows, HorizontalGroupNew(pad, TextBoxWidgetNew(_("Tap the globe key to switch between the layouts in the rotation."), W - 2 * pad)))
+        table.insert(rows, VerticalSpan:new{ width = T.px("sp-1") })
+        local pop = GW.Popover:new{ content = rows, anchor = self.parent.dimen, above = true, align = "left" }
+        self[1] = pop.frame
+        self.leaf_pop = pop
+        self.dialog_frame = pop.frame
+        self.movable = pop.frame
+        self.paintTo = function(this, bb, x, y) pop.frame:paintTo(bb, pop.frame_dimen.x, pop.frame_dimen.y) end
+        self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
+        local GestureRange = require("ui/gesturerange")
+        self.ges_events = self.ges_events or {}
+        self.ges_events.TapLeafOutside = { GestureRange:new{ ges = "tap", range = self.dimen } }
+        self.onTapLeafOutside = function(this, _arg, ges)
+            if ges and ges.pos and ges.pos:intersectWith(pop.frame_dimen) then return false end
+            close()
+            return true
+        end
+        self.onShow = function()
+            UIManager:setDirty(self, function() return "ui", pop.frame_dimen end)
+        end
+        self.onCloseWidget = function()
+            UIManager:setDirty(nil, "ui", pop.frame_dimen)
+        end
+    end, "KeyboardLayoutDialog:init")
 end
 
 return M

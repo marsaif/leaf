@@ -60,6 +60,12 @@ L.MODULES = {
     "pageheader",
     -- library polish
     "bookactions",
+    -- gaps: generic widgets
+    "arrange",
+    "imageviewer",
+    "pathchooser",
+    "openwith",
+    "unlock",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
