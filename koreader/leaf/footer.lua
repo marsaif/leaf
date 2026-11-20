@@ -30,6 +30,7 @@ function M.apply(L)
     d.toc_markers = true
     d.toc_markers_width = 1
     d.align = "left"
+    d.all_at_once = true       -- the full .rd-foot line; with it off a tap cycles single items (Gaps › footer-mode)
     d.items_separator = "dot"
     d.text_font_size = 11      -- --fs-xs (KOReader sizes share the 600px base)
     d.progress_margin = true   -- line and text aligned with the book's margins
@@ -60,6 +61,45 @@ function M.apply(L)
         when = when or T_(_("%1 pages left in chapter"), left_pages)
         return string.format("%d%% · %s", pct, when), string.format("%d / %d", page, total), page, total
     end
+
+    -- "all at once" off: one item per tap (prototype Gaps › footer-mode): left text, right text, or nil (bar only)
+    local GEN = ReaderFooter.textGeneratorMap or {}
+    local function single_text(self)
+        if self.settings.all_at_once then return end
+        local name = self.mode_index and self.mode_index[self.mode]
+        if self.genFooterText == GEN.empty or not name or not self.settings[name] then return "", "" end
+        local doc = self.ui.document
+        local page = self.pageno or (self.ui.view and self.ui.view.state and self.ui.view.state.page) or 1
+        local total = doc and doc:getPageCount() or 0
+        local st = self.ui.statistics
+        local avg = st and st.settings and st.settings.is_enabled and st.avg_time and st.avg_time == st.avg_time and st.avg_time > 0 and st.avg_time
+        local ch_left = self.ui.toc and self.ui.toc:getChapterPagesLeft(page, true) or (doc and doc:getTotalPagesLeft(page)) or 0
+        local book_left = doc and doc:getTotalPagesLeft(page) or 0
+        if name == "page_progress" then return "", string.format("%d / %d", page, total), page, total
+        elseif name == "pages_left_book" then return T_(_("%1 pages left in book"), book_left)
+        elseif name == "pages_left" then return T_(_("%1 pages left in chapter"), ch_left)
+        elseif name == "time" then
+            local now = os.time()
+            local secs = tonumber(os.date("%H", now)) * 3600 + tonumber(os.date("%M", now)) * 60
+            return require("datetime").secondsToHour(secs, G_reader_settings:isTrue("twelve_hour_clock"))
+        elseif name == "battery" then
+            local cap
+            pcall(function() cap = require("device"):getPowerDevice():getCapacity() end)
+            return cap and T_(_("Battery %1%"), cap) or ""
+        elseif name == "percentage" then return string.format("%d%%", math.floor((self:getBookProgress() or 0) * 100 + 0.5))
+        elseif name == "book_time_to_read" then
+            return avg and T_(_("%1 left in book"), human_duration(book_left * avg)) or T_(_("%1 pages left in book"), book_left)
+        elseif name == "chapter_time_to_read" then
+            return avg and T_(_("%1 left in chapter"), human_duration(ch_left * avg)) or T_(_("%1 pages left in chapter"), ch_left)
+        elseif name == "chapter_progress" then
+            local done = self.ui.toc and self.ui.toc:getChapterPagesDone(page)
+            local count = self.ui.toc and self.ui.toc:getChapterPageCount(page)
+            if done and count then return T_(_("Page %1 of %2 in chapter"), done + 1, count) end
+        end
+        local ok, t = pcall(self.genFooterText, self)
+        return ok and t or ""
+    end
+    M.single_text = single_text
 
     local function paint_colours(self)
         if self.footer_text then self.footer_text.fgcolor = T.color("page-2") end
@@ -106,15 +146,23 @@ function M.apply(L)
         end
         local inner = W - left_m - right_m
         local face = L.face("ui", "fs-xs")
-        local left, _right, page, total = leaf_text(self)
+        local left, right, page, total = single_text(self)
+        if left == nil then
+            left, right, page, total = leaf_text(self)
+        end
+        local bar_only = left == "" and (right == nil or right == "")
         local lw = TextWidget:new{ text = left, face = face, fgcolor = T.color("page-2"), max_width = math.floor(inner * 0.7) }
-        local pw = TextWidget:new{ text = tostring(page), face = L.face("ui-medium", "fs-xs"), fgcolor = T.color("page-ink") }
-        local ow = TextWidget:new{ text = " / " .. total, face = face, fgcolor = T.color("page-2") }
-        local th = lw:getSize().h
+        local pw = TextWidget:new{ text = page and tostring(page) or "", face = L.face("ui-medium", "fs-xs"), fgcolor = T.color("page-ink") }
+        local ow = TextWidget:new{ text = page and (" / " .. total) or "", face = face, fgcolor = T.color("page-2") }
+        local probe = TextWidget:new{ text = "0", face = face }
+        local th = probe:getSize().h
+        probe:free()
         local text_y = y + H - T.px("sp-3") - th
         local line_y = text_y - T.px("sp-2") - 2
+        local clear_y = line_y - 2 -- the whole .rd-foot band, whatever this mode shows
+        if bar_only then line_y = y + H - T.px("sp-3") - 2 end
         -- clear the footer band (and the tick overhang above it) to the page colour
-        local top = math.min(y + H - fh, line_y - 2)
+        local top = math.min(y + H - fh, clear_y)
         bb:paintRect(x, top, W, y + H - top, T.color("page"))
         -- .rd-line: track, fill, chapter ticks
         local lh = 2
@@ -139,15 +187,18 @@ function M.apply(L)
             end
         end
         local base = text_y + lw:getBaseline()
-        lw:paintTo(bb, x + left_m, text_y)
-        local rx = x + W - right_m - pw:getSize().w - ow:getSize().w
-        pw:paintTo(bb, rx, base - pw:getBaseline())
-        ow:paintTo(bb, rx + pw:getSize().w, base - ow:getBaseline())
+        if left ~= "" then lw:paintTo(bb, x + left_m, text_y) end
+        if page then
+            local rx = x + W - right_m - pw:getSize().w - ow:getSize().w
+            pw:paintTo(bb, rx, base - pw:getBaseline())
+            ow:paintTo(bb, rx + pw:getSize().w, base - ow:getBaseline())
+        end
         lw:free() pw:free() ow:free()
     end, "ReaderFooter:paintTo")
 
     L.wrap(ReaderFooter, "_updateFooterText", function(orig, self, force_repaint, full_repaint)
-        if self.settings.leaf_text == false or self.has_no_mode or not self.footer_text then
+        if not (self.ui and self.ui.document) then return end -- a refresh scheduled before the book closed
+        if self.settings.leaf_text == false or self.has_no_mode or not self.footer_text or not self.settings.all_at_once then
             return orig(self, force_repaint, full_repaint)
         end
         local left, right = leaf_text(self)

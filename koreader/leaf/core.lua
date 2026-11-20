@@ -72,6 +72,8 @@ L.MODULES = {
     "statpages",
     -- gaps-lists: bookmark actions / details / select, search bar, map options, dictionary menus
     "readerlists",
+    -- gaps: reader (imageviewer is listed above)
+    "reader_gaps",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end

@@ -24,10 +24,10 @@
         their counts, files with their sizes, ⋮ popover "Extract all files…"), sheet
         "archive-file" (View · Extract to <folder> · Extract to…), dialog "archive-extract".
         Viewing images keeps KOReader's ImageViewer (ported with the generic widgets); Leaf only
-        gives it the archive's title line: title_text = the image name (updated when flipping),
-        _leaf_sub = "archive.zip › folder".
+        gives it the archive's title line through leaf/imageviewer.lua's M.next: the image name as
+        title (updated when flipping), sub = "archive.zip › folder", on a --page card.
       * OPDS page streaming (opdspse.streamPages): the same title line for the ImageViewer:
-        the publication title and "Page stream · <catalog>" (_leaf_sub).
+        the publication title and "Page stream · <catalog>" (sub), on a --page card.
 --]]
 local BottomContainer = require("ui/widget/container/bottomcontainer")
 local CenterContainer = require("ui/widget/container/centercontainer")
@@ -813,26 +813,9 @@ function M.apply(L)
     end, "BookInfo:showCustomDialog")
 
     ------------------------------------------------------------------ 4. image viewer title line (archive, OPDS stream)
-    local ImageViewer = require("ui/widget/imageviewer")
-    L.wrap(ImageViewer, "init", function(orig, self, ...)
-        local nx = M._next_iv
-        if nx then
-            M._next_iv = nil
-            self.with_title_bar = true
-            self._leaf_sub = nx.sub
-            self._leaf_names = nx.names
-            self.title_text = nx.title or (nx.names and nx.names[1]) or self.title_text
-        end
-        return orig(self, ...)
-    end, "ImageViewer:init (gaps library title)")
-    L.wrap(ImageViewer, "switchToImageNum", function(orig, self, n, ...)
-        local name = self._leaf_names and self._leaf_names[n]
-        if name and name ~= self.title_text then
-            self.title_text = name
-            if self.title_bar and self.title_bar.setTitle then self.title_bar:setTitle(name, true) end
-        end
-        return orig(self, n, ...)
-    end, "ImageViewer:switchToImageNum (gaps library title)")
+    -- leaf/imageviewer.lua owns ImageViewer: these hooks hand it the title line through its M.next
+    -- (title, sub, per-image names) right before the viewer opens, and clear it after
+    local function iv_next(nx) require("leaf/imageviewer").next = nx end
 
     ------------------------------------------------------------------ 5. archive viewer
     local DocumentRegistry = require("document/documentregistry")
@@ -986,10 +969,11 @@ function M.apply(L)
                     if it.is_file and DocumentRegistry:isImageFile(it.path) then table.insert(names, it.text) end
                 end
                 local dir = filepath:match("^(.*)/[^/]*$")
-                M._next_iv = { names = names, sub = arc_trail(self, dir and (dir .. "/") or "") }
+                iv_next{ names = names, sub = arc_trail(self, dir and (dir .. "/") or ""), paper = true, controls = true }
             end
-            orig(self, filepath)
-            M._next_iv = nil
+            local ok, err = pcall(orig, self, filepath)
+            iv_next(nil)
+            if not ok then error(err, 0) end
         end, "ArchiveViewer:viewFile")
     end
     M.patch_archive = patch_archive
@@ -1019,11 +1003,12 @@ function M.apply(L)
             L.wrap(PSE, "streamPages", function(orig, self, ...)
                 local ctx = M._pse_ctx
                 if ctx and ctx.title then
-                    M._next_iv = { title = ctx.title,
+                    iv_next{ title = ctx.title, paper = true, controls = true,
                         sub = ctx.catalog and (_("Page stream") .. " · " .. ctx.catalog) or _("Page stream") }
                 end
-                orig(self, ...)
-                M._next_iv = nil
+                local ok, err = pcall(orig, self, ...)
+                iv_next(nil)
+                if not ok then error(err, 0) end
             end, "OPDSPSE:streamPages (gaps library)")
         end,
     }
