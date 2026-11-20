@@ -60,6 +60,8 @@ L.MODULES = {
     "pageheader",
     -- library polish
     "bookactions",
+    -- gaps: library (select mode list, connected folders, metadata fields, archive viewer)
+    "gapslib",
 }
 
 function L.log(...) logger.info("Leaf:", ...) end
