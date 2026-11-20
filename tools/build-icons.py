@@ -352,6 +352,17 @@ MAP = {
     "leaf.lib.check.bold": (["check"], {"stroke": "bold"}),
     "leaf.lib.heart.bold": (["heart"], {"stroke": "bold"}),
     # -- end library polish
+    # -- gaps reader (status bar, flipping, links, image viewer, quick menu, screenshot, perception, tweaks)
+    **{f"leaf.gr.{n}": n for n in (
+        "book-open", "bookmark", "text-select", "loader-circle", "refresh-cw", "link", "globe", "external-link",
+        "copy", "qr-code", "inbox", "eye", "image", "monitor-smartphone", "trash-2", "hand", "expand", "shrink",
+        "rotate-cw", "camera", "captions", "captions-off", "x", "moon", "sun", "map", "list", "map-pin",
+        "languages", "chart-column", "settings-2", "play", "columns-2", "info", "chevron-right", "hash",
+        "panel-left", "list-ordered", "type", "circle-help", "wand-sparkles", "list", "crosshair", "paintbrush",
+        "cpu", "quote", "history", "timer", "zap", "arrow-left", "pencil", "clipboard-copy", "chevrons-left",
+        "chevrons-right", "file-text", "book-a", "highlighter", "sticky-note", "star", "search", "printer",
+    )},
+    # -- end gaps reader
 }
 
 KEEP_STOCK = {

@@ -105,6 +105,7 @@ local noop = function() end
 
 local LK = {} -- lookup scenes: helpers, defined below the list
 local LIB = {} -- library scenes: helpers, defined below the list
+local GR = {} -- gaps reader scenes: helpers, defined below the list
 -- desktop has no Wi-Fi hardware: a fake scan result (system and tools scenes)
 function LEAF_FAKE_NETWORKS()
     return {
@@ -615,6 +616,39 @@ local SCENES = {
             ui:handleEvent(require("ui/event"):new("SetLineSpace", before))
         end)
     end) end },
+    -- gaps reader scenes (status bar modes, flipping, links, image viewer, quick menu, timer, screenshot,
+    -- perception expander, overlapping highlights, stable page numbers, style tweaks, scroll mode)
+    { "gr-footer-page", function() GR.footer("page_progress") end, book = "epub" },
+    { "gr-footer-chtime", function() GR.footer("chapter_time_to_read") end },
+    { "gr-footer-bookleft", function() GR.footer("pages_left_book") end },
+    { "gr-footer-clock", function() GR.footer("time") end },
+    { "gr-footer-bar", function() GR.footer("mem_usage") end },
+    { "gr-footer-off", function() GR.footer("off") end },
+    { "gr-flip-select", function() GR.flip("select") end },
+    { "gr-flip-render", function() GR.flip("render") end },
+    { "gr-flip-ready", function() GR.flip("ready") end },
+    { "gr-link-ext", function() RUI().link:onGoToExternalLink("https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays") end },
+    { "gr-link-wiki", function() RUI().link:onGoToExternalLink("https://en.wikipedia.org/wiki/Windmill") end },
+    { "gr-img-figure", function() GR.figure(true) end, wait = 2 },
+    { "gr-img-figure-noui", function() GR.figure(false) end, wait = 2 },
+    { "gr-quickmenu", function() GR.quickmenu(false) end },
+    { "gr-quickmenu-profile", function() GR.quickmenu(true) end },
+    { "gr-timer-up", function() GR.timer(true) end },
+    { "gr-timer-alarm", function() GR.timer(false) end },
+    { "gr-screenshot", function() GR.screenshot() end, wait = 2 },
+    { "gr-screenshot-view", function() GR.screenshot(true) end, wait = 2.5 },
+    { "gr-perception", function() GR.perception() end },
+    { "gr-pe-set", function() GR.perception(true) end },
+    { "gr-hl-multi", function() GR.hl_multi() end },
+    { "gr-pagemap", function() GR.pagemap("list") end, wait = 2.5 },
+    { "gr-pagemap-set", function() GR.pagemap("settings") end, wait = 2.5 },
+    { "gr-pagemap-prompt", function() GR.pagemap("prompt") end, wait = 2.5 },
+    { "gr-tweak-info", function() GR.tweak("info") end },
+    { "gr-tweak-editor", function() GR.tweak("editor") end },
+    { "gr-tweak-menu", function() GR.tweak("menu") end },
+    { "gr-tweak-dirty", function() GR.tweak("dirty") end },
+    { "gr-scroll-mode", function() GR.scroll_mode() end, wait = 3 },
+    -- end gaps reader scenes
     -- PDF scenes: replace the EPUB with the PDF, so they run last (reader + typeset tabs)
     { "reader-pdf", function() open_book(PDF_BOOK) end, keep = true, wait = 4, book = "pdf" },
     { "chrome-pdf", function()
@@ -628,6 +662,12 @@ local SCENES = {
     { "ts-pdf-reflow", function() ts_open("reflow") end },
     { "ts-pdf-contrast", function() ts_open("contrast") end },
     { "ts-pdf-doc", function() ts_open("doc") end },
+    -- gaps reader scenes (PDF)
+    { "gr-flip-flip", function() GR.flip("flip") end, book = "pdf" },
+    { "gr-flip-bm", function() GR.flip("bm") end },
+    { "gr-linkbox", function() GR.linkbox() end },
+    { "gr-busy", function() GR.busy() end },
+    -- end gaps reader scenes (PDF)
 }
 
 -- lookup scenes: helpers
@@ -651,6 +691,150 @@ function LK.select(y0, y1, word)
 end
 function LK.word_boxes() return RUI().highlight.selected_text.sboxes end
 
+
+-- gaps reader scenes: helpers (each scene puts the reader back in LK.cleanup, run after the shot)
+function GR.footer(name)
+    local f = RUI().view.footer
+    local all, mode, on = f.settings.all_at_once, f.mode, f.settings[name]
+    f.settings.all_at_once = false
+    if name ~= "off" then f.settings[name] = name ~= "mem_usage" end -- mem_usage off: a disabled item, the bar alone
+    f:applyFooterMode(f.mode_list[name])
+    f:onUpdateFooter(true)
+    LK.cleanup = function()
+        f.settings.all_at_once = all
+        if name ~= "off" then f.settings[name] = on end
+        f:updateFooterTextGenerator()
+        f:applyFooterMode(mode)
+        f:onUpdateFooter(true)
+    end
+end
+function GR.flip(kind)
+    local ui = RUI()
+    if kind == "flip" then
+        ui.paging:onTogglePageFlipping()
+        LK.cleanup = function() ui.paging:onTogglePageFlipping() end
+    elseif kind == "bm" then
+        ui.paging:onToggleBookmarkFlipping()
+        LK.cleanup = function() ui.paging:onToggleBookmarkFlipping() end
+    elseif kind == "select" then
+        ui.highlight.select_mode = true
+        LK.cleanup = function() ui.highlight.select_mode = false end
+    else
+        local r = ui.rolling
+        r.rendering_state = kind == "render" and r.RENDERING_STATE.FULL_RENDERING_IN_BACKGROUND or r.RENDERING_STATE.FULL_RENDERING_READY
+        LK.cleanup = function() r.rendering_state = nil end
+    end
+    UIManager:setDirty(ui.dialog, "ui")
+end
+function GR.figure(controls)
+    require("leaf/imageviewer").next = require("leaf/reader_gaps").book_image_next(RUI())
+    show("ui/widget/imageviewer", { file = require("datastorage"):getDataDir() .. "/patches/autoshot-figure.png",
+        with_title_bar = false, fullscreen = true, buttons_visible = controls })
+end
+function GR.quickmenu(profile)
+    local s = { night_mode = true, show_frontlight_dialog = true, book_map = true, toggle_bookmark = true, toc = true,
+        go_to_pinned_page = true, translate_page = true, book_statistics = true,
+        settings = { show_as_quickmenu = true, quickmenu_separators = { toc = true },
+            order = { "night_mode", "show_frontlight_dialog", "book_map", "toggle_bookmark", "toc", "go_to_pinned_page",
+                "translate_page", "book_statistics" } } }
+    if profile then s.settings.name = "Night reading" end
+    require("dispatcher"):execute(s, profile and { qm_show = true } or { gesture = { ges = "two_finger_swipe", direction = "north" } })
+end
+function GR.timer(interval)
+    local rt = RUI().readtimer
+    if not rt then return end
+    local last = rt.last_interval_time
+    rt.last_interval_time = interval and 1200 or 0
+    rt.time = 1
+    rt.alarm_callback()
+    LK.cleanup = function() rt.last_interval_time = last rt:unschedule() end
+end
+function GR.screenshot(view)
+    local dir = require("datastorage"):getDataDir() .. "/screenshots"
+    require("util").makePath(dir)
+    RUI().screenshot:onScreenshot(dir .. "/Reader_Animal Farm_p12_2026-11-19.png")
+    if view then require("leaf/reader_gaps")._shot_view() end
+end
+function GR.perception(settings)
+    local pe = RUI().perceptionexpander
+    if not pe then return end
+    local was = pe.is_enabled
+    pe.is_enabled = true
+    pe:createUI()
+    if settings then pe:showSettingsDialog() else require("leaf/reader_gaps").perception_banner(pe) end
+    UIManager:setDirty(RUI().dialog, "ui")
+    LK.cleanup = function() pe.is_enabled = was UIManager:setDirty(RUI().dialog, "ui") end
+end
+function GR.hl_multi()
+    local ui = RUI()
+    local anns = ui.annotation.annotations
+    local n0 = #anns
+    local page = ui.document:getXPointer()
+    local fake = {
+        { text = "some there if answered at on quiet answer the miller", drawer = "lighten", color = "yellow" },
+        { text = "Carried it watched the and now believed the miller", drawer = "underscore", color = "blue", note = "Start of the vote" },
+        { text = "great dark the a that strange road the, in the wind", drawer = "lighten", color = "green" },
+    }
+    local idx = {}
+    for _i, a in ipairs(fake) do
+        a.page, a.pos0, a.pos1, a.datetime = page, page, page, "2026-11-19 21:00:00"
+        table.insert(anns, a)
+        table.insert(idx, #anns)
+    end
+    ui.highlight:showChooseHighlightDialog(idx)
+    LK.cleanup = function() for i = #anns, n0 + 1, -1 do table.remove(anns, i) end end
+end
+function GR.pagemap(what)
+    local ui = RUI()
+    local pm = ui.pagemap
+    if not pm then return end
+    if not ui.document:hasPageMap() then
+        -- what Characters per page › Set does (without saving it in the book's settings)
+        pm.has_pagemap = true
+        pm:resetLayout()
+        pm.view:registerViewModule("pagemap", pm)
+        pm.chars_per_synthetic_page = 1818
+        pm.page_labels_cache = nil
+        ui.document:buildSyntheticPageMap(1818)
+    end
+    local G = require("leaf/reader_gaps")
+    if what == "list" then pm:onShowPageList()
+    elseif what == "settings" then G.pagemap_settings(pm)
+    else G.publisher_prompt(pm) end
+end
+function GR.tweak(what)
+    local ui = RUI()
+    local st = ui.styletweak
+    if what == "info" then
+        require("leaf/reader_gaps").tweak_info_demo(st)
+        return
+    end
+    local saved = st.book_style_tweak
+    st.book_style_tweak = "/* Only for this book */\np.dropcap::first-letter {\n    font-size: 3em;\n    float: left;\n}\n.footnote {\n    -cr-hint: footnote-inpage;\n}\nblockquote {\n    margin-left: 1.2em;\n    font-style: italic;\n}"
+    st:onEditBookTweak()
+    local ed = require("leaf/reader_gaps")._tweak_editor
+    if ed then
+        if what == "menu" then ed:leafShowSnippets() end
+        if what == "dirty" then ed:leafMarkDirty() ed:leafAskClose() end
+    end
+    LK.cleanup = function() st.book_style_tweak = saved end
+end
+function GR.scroll_mode()
+    local ui = RUI()
+    local mode = ui.view.view_mode
+    ui:handleEvent(require("ui/event"):new("SetViewMode", "scroll"))
+    UIManager:scheduleIn(1, function() ui:handleEvent(require("ui/event"):new("GotoPage", ui.document:getCurrentPage() + 33)) end)
+    LK.cleanup = function() ui:handleEvent(require("ui/event"):new("SetViewMode", mode or "page")) end
+end
+function GR.linkbox()
+    local Geom = require("ui/geometry")
+    local W, H = Screen:getWidth(), Screen:getHeight()
+    show("ui/widget/linkbox", { box = Geom:new{ x = math.floor(W * 0.195), y = math.floor(H * 0.262), w = math.floor(W * 0.21), h = math.floor(H * 0.024) } })
+end
+function GR.busy()
+    require("leaf/reader_gaps").busy_start(RUI())
+    LK.cleanup = function() require("leaf/reader_gaps").busy_stop() end
+end
 
 -- library scenes: helpers
 -- PT's display mode for every list (grid / detail / list), without the file manager rebuild of setView
